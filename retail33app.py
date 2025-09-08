@@ -10,7 +10,7 @@ st.set_page_config(page_title="Retail 33 - Demo", page_icon="🛍️", layout="w
 
 # ---------- Modelo de datos ----------
 TIENDAS_COLS = [
-    "tienda_id","nombre","ciudad","gerente","meta_diaria","estatus"
+    "tienda_id","nombre","ciudad","gerente","estatus"
 ]
 
 CAPTURAS_COLS = [
@@ -23,10 +23,7 @@ CAPTURAS_COLS = [
     "maniquies_si","maniquies_notas",
     "zona_impulso_si","zona_impulso_notas",
     "area_ropa_si","area_ropa_notas"
-]
 
-TAREAS_COLS = [
-    "tarea_id","tienda_id","titulo","detalle","prioridad","estado","responsable","fecha_creacion","fecha_vencimiento"
 ]
 
 FOTOS_COLS = [
@@ -49,18 +46,18 @@ LABEL_MAP = dict(CATEGORIAS)
 def demo_data():
     # 5 tiendas de ejemplo
     df_t = pd.DataFrame([
-        {"tienda_id":"T01","nombre":"Tienda 01","ciudad":"CDMX","gerente":"Ana","meta_diaria":25000,"estatus":"abierta"},
-        {"tienda_id":"T02","nombre":"Tienda 02","ciudad":"CDMX","gerente":"Luis","meta_diaria":20000,"estatus":"abierta"},
-        {"tienda_id":"T03","nombre":"Tienda 03","ciudad":"GDL","gerente":"Marta","meta_diaria":18000,"estatus":"abierta"},
-        {"tienda_id":"T04","nombre":"Tienda 04","ciudad":"MTY","gerente":"Paco","meta_diaria":22000,"estatus":"abierta"},
-        {"tienda_id":"T05","nombre":"Tienda 05","ciudad":"MTY","gerente":"Sofía","meta_diaria":15000,"estatus":"cerrada"},
+        {"tienda_id":"T01","nombre":"Perisur","ciudad":"CDMX","gerente":"Ana","estatus":"abierta"},
+        {"tienda_id":"T02","nombre":"Santa Fe","ciudad":"CDMX","gerente":"Luis","estatus":"abierta"},
+        {"tienda_id":"T03","nombre":"Centro ","ciudad":"CDMX","gerente":"Marta","estatus":"abierta"},
+        {"tienda_id":"T04","nombre":"Universidad","ciudad":"CDMX","gerente":"Paco","estatus":"abierta"},
+        {"tienda_id":"T05","nombre":"Puebla","ciudad":"PUE","gerente":"Sofía","estatus":"cerrada"},
     ])[TIENDAS_COLS]
 
     hoy = dt.date.today()
     df_c = pd.DataFrame([
-        {"fecha":hoy,"tienda_id":"T01","ventas":27000,"tickets":120,"conversion":0.35,"ticket_prom":225,"merma_alerta":"ninguna","notas":"Todo ok"},
-        {"fecha":hoy,"tienda_id":"T02","ventas":15000,"tickets":90,"conversion":0.22,"ticket_prom":166,"merma_alerta":"merma","notas":"Faltan productos"},
-        {"fecha":hoy,"tienda_id":"T03","ventas":10000,"tickets":40,"conversion":0.18,"ticket_prom":250,"merma_alerta":"ninguna","notas":""},
+        {"fecha":hoy,"tienda_id":"T01","notas":"Todo ok"},
+        {"fecha":hoy,"tienda_id":"T02","notas":"Faltan productos"},
+        {"fecha":hoy,"tienda_id":"T03","notas":"acomodar"},
     ])[CAPTURAS_COLS[:8]]  # sin auditoría visual por ahora
     return df_t, df_c, pd.DataFrame(columns=TAREAS_COLS), pd.DataFrame(columns=FOTOS_COLS)
 
