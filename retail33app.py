@@ -27,7 +27,7 @@ label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- Datos demo ----------
+# ---------- Datos demo / modelo ----------
 TIENDAS_COLS = ["tienda_id","nombre","ciudad","gerente","estatus"]
 CATEGORIAS = [
     ("pasarela",       "Pasarela de la moda"),
@@ -41,7 +41,7 @@ CATEGORIAS = [
 ]
 BOOL_COLS = [f"{k}_si" for k,_ in CATEGORIAS]
 
-# Paleta pastel por categoría (header/contorno)
+# Paleta pastel por categoría (para el header del expander)
 PASTEL = {
     "pasarela":        "#A7C7E7",  # azul
     "acomodo":         "#C6E2B5",  # verde
@@ -161,30 +161,35 @@ with tab_captura:
 
     st.markdown("Visual (Sí/No, notas y foto opcional)")
 
-    # Render pastel por categoría usando stylable_container (color garantizado)
+    # Expanders pastel perfectamente alineados (header coloreado)
     for key, label in CATEGORIAS:
         bg = PASTEL[key]
         with stylable_container(
             key=f"wrap_{key}",
             css_styles=f"""
                 {{
-                    background: {bg};
                     border: 1px solid #e8e8e8;
                     border-radius: 12px;
-                    padding: 6px;
-                    margin-bottom: 10px;
+                    margin-bottom: 12px;
+                    padding: 0;
+                    overflow: hidden;
                 }}
                 [data-testid="stExpander"] summary {{
-                    background: transparent !important;
+                    background: {bg} !important;
                     color: #4a4a4a !important;
                     font-weight: 700;
+                    margin: 0 !important;
+                    padding: 12px 14px !important;
                     border: none !important;
                 }}
                 [data-testid="stExpander"] > div[role="region"] {{
                     background: #ffffff !important;
-                    border: 1px solid #f0f0f0;
-                    border-radius: 8px;
-                    padding-bottom: 8px;
+                    border-top: 1px solid #f0f0f0;
+                    border-radius: 0 0 12px 12px;
+                    padding: 12px 14px 16px 14px;
+                }}
+                [data-testid="stExpander"] summary:focus {{
+                    outline: none !important;
                 }}
             """
         ):
