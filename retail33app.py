@@ -165,15 +165,79 @@ with tab_dash:
     colC.metric("Tiendas)", f"{tiendas_total}")
 
     # Grid por tiendas
-    st.markdown(" Tiendas (color por score)")
-    grid_cols = 3
-    df_grid = df_t_filt.copy().sort_values("tienda_id")
-    blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
-    css = """
-    <style>
-    .store { border-radius:10px; padding:10px; color:white; font-weight:700; text-align:center; }
-    .store small { display:block; font-weight:400; }
-    </style>
+    st.markdown("### 🛍️ Tiendas (color por score)")
+
+        grid_cols = 3
+        df_grid = df_t_filt.copy().sort_values("tienda_id")
+        blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
+        
+        # ---- CSS Pastel ----
+        css = """
+        <style>
+        /* Fondo general */
+        body, .stApp {
+            background-color: #fcfcfc;
+            font-family: "Helvetica Neue", sans-serif;
+            color: #5b5b5b;
+        }
+        
+        /* Títulos */
+        h1, h2, h3, h4 {
+            color: #b56576; /* rosado pastel */
+        }
+        
+        /* Métricas */
+        [data-testid="stMetricValue"] {
+            color: #6d597a; /* lavanda pastel */
+            font-weight: bold;
+        }
+        [data-testid="stMetricLabel"] {
+            color: #84a59d; /* verde menta */
+        }
+        
+        /* Expansores */
+        .streamlit-expanderHeader {
+            background-color: #fdf1f1 !important;
+            color: #5b5b5b !important;
+            font-weight: bold;
+            border-radius: 6px;
+        }
+        
+        /* Inputs */
+        .stTextInput, .stNumberInput, .stSelectbox, .stTextArea, .stDateInput {
+            background-color: #fffaf6;
+            color: #5b5b5b;
+        }
+        
+        /* Botones */
+        .stButton>button {
+            background-color: #f6bd60; /* amarillo pastel */
+            color: #fff;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+        }
+        .stButton>button:hover {
+            background-color: #f28482; /* coral */
+            color: white;
+        }
+        
+        /* Grid de tiendas */
+        .store {
+            border-radius: 10px;
+            padding: 10px;
+            font-weight: 700;
+            text-align: center;
+            color: #444; /* texto gris oscuro */
+        }
+        .store small {
+            display: block;
+            font-weight: 400;
+        }
+        </style>
+        """
+
+""", unsafe_allow_html=True)
     """
     st.markdown(css, unsafe_allow_html=True)
 
