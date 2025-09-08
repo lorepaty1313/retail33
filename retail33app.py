@@ -142,12 +142,12 @@ with tab_dash:
     # Color por score (gris si no hay captura)
     def color_from_score(score, has_data):
         if not has_data:
-            return "#9E9E9E"  # sin captura
+            return "#E5E5E5"  # gris pastel
         if score >= 0.8:
-            return "#4CAF50"  # verde
+            return "#A8D5BA"  # verde menta pastel
         if score >= 0.5:
-            return "#FFC107"  # ámbar
-        return "#F44336"      # rojo
+            return "#FFF3B0"  # amarillo mantequilla
+        return "#FFB5A7"      # coral pastel
 
     has_data = df_hoy[BOOL_COLS].notna().any(axis=1)
     df_hoy["color"] = [
