@@ -2,12 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime as dt
+from streamlit_extras.stylable_container import stylable_container
 
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
 
 # ---- CSS Global: fondo blanco + texto gris ----
-css_global = """
+st.markdown("""
 <style>
 body, .stApp { background:#ffffff !important; color:#4a4a4a !important; font-family:"Helvetica Neue", sans-serif; }
 h1, h2, h3, h4, h5, h6 { color:#4a4a4a !important; }
@@ -24,50 +25,7 @@ label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
 .store{ border-radius:10px; padding:12px; font-weight:700; text-align:center; color:#444; }
 .store small{ display:block; font-weight:400; }
 </style>
-"""
-st.markdown(css_global, unsafe_allow_html=True)
-
-# ---- CSS: colores pastel por expander usando ANCLAS adyacentes ----
-css_expand = """
-<style>
-/* Base del header del expander dentro del panel de captura */
-#cap-panel [data-testid="stExpander"] summary,
-#cap-panel .streamlit-expanderHeader{
-  color:#4a4a4a !important;
-  font-weight:700;
-  border-radius:8px;
-  border:1px solid #e8e8e8;
-}
-
-/* Pintamos cada expander según su ancla previa (#exp-<key>) */
-#exp-pasarela + div [data-testid="stExpander"] summary,
-#exp-pasarela + div .streamlit-expanderHeader { background:#A7C7E7 !important; }  /* azul */
-#exp-acomodo + div [data-testid="stExpander"] summary,
-#exp-acomodo + div .streamlit-expanderHeader { background:#C6E2B5 !important; }   /* verde */
-#exp-producto_nuevo + div [data-testid="stExpander"] summary,
-#exp-producto_nuevo + div .streamlit-expanderHeader { background:#F7C6C7 !important; } /* rosa */
-#exp-producto_rebaja + div [data-testid="stExpander"] summary,
-#exp-producto_rebaja + div .streamlit-expanderHeader { background:#D9C2E9 !important; } /* lila */
-#exp-display + div [data-testid="stExpander"] summary,
-#exp-display + div .streamlit-expanderHeader { background:#FFF3B0 !important; }   /* amarillo */
-#exp-maniquies + div [data-testid="stExpander"] summary,
-#exp-maniquies + div .streamlit-expanderHeader { background:#FFB5A7 !important; } /* coral */
-#exp-zona_impulso + div [data-testid="stExpander"] summary,
-#exp-zona_impulso + div .streamlit-expanderHeader { background:#B5EAD7 !important; } /* menta */
-#exp-area_ropa + div [data-testid="stExpander"] summary,
-#exp-area_ropa + div .streamlit-expanderHeader { background:#FFDAB9 !important; } /* durazno */
-
-/* Cuerpo del expander blanco para inputs */
-#cap-panel [data-testid="stExpander"] > div[role="region"],
-#cap-panel .streamlit-expanderContent{
-  background:#ffffff !important;
-  border:1px solid #f0f0f0;
-  border-radius:8px;
-  padding-bottom:8px;
-}
-</style>
-"""
-st.markdown(css_expand, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ---------- Datos demo ----------
 TIENDAS_COLS = ["tienda_id","nombre","ciudad","gerente","estatus"]
@@ -82,6 +40,18 @@ CATEGORIAS = [
     ("area_ropa",      "Área ropa"),
 ]
 BOOL_COLS = [f"{k}_si" for k,_ in CATEGORIAS]
+
+# Paleta pastel por categoría (header/contorno)
+PASTEL = {
+    "pasarela":        "#A7C7E7",  # azul
+    "acomodo":         "#C6E2B5",  # verde
+    "producto_nuevo":  "#F7C6C7",  # rosa
+    "producto_rebaja": "#D9C2E9",  # lila
+    "display":         "#FFF3B0",  # amarillo
+    "maniquies":       "#FFB5A7",  # coral
+    "zona_impulso":    "#B5EAD7",  # menta
+    "area_ropa":       "#FFDAB9",  # durazno
+}
 
 def demo_data():
     df_t = pd.DataFrame([
@@ -191,18 +161,38 @@ with tab_captura:
 
     st.markdown("Visual (Sí/No, notas y foto opcional)")
 
-    # Panel scopeado para aplicar las reglas CSS
-    st.markdown('<div id="cap-panel">', unsafe_allow_html=True)
-
-    # ANCLA + expander por categoría (el CSS apunta a '#exp-<key> + div ...')
+    # Render pastel por categoría usando stylable_container (color garantizado)
     for key, label in CATEGORIAS:
-        st.markdown(f'<div id="exp-{key}"></div>', unsafe_allow_html=True)
-        with st.expander(label):
-            st.radio("¿Cumple?", ["No","Sí"], horizontal=True, key=f"{key}_si_demo")
-            st.text_area("Notas", key=f"{key}_notas_demo")
-            st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
+        bg = PASTEL[key]
+        with stylable_container(
+            key=f"wrap_{key}",
+            css_styles=f"""
+                {{
+                    background: {bg};
+                    border: 1px solid #e8e8e8;
+                    border-radius: 12px;
+                    padding: 6px;
+                    margin-bottom: 10px;
+                }}
+                [data-testid="stExpander"] summary {{
+                    background: transparent !important;
+                    color: #4a4a4a !important;
+                    font-weight: 700;
+                    border: none !important;
+                }}
+                [data-testid="stExpander"] > div[role="region"] {{
+                    background: #ffffff !important;
+                    border: 1px solid #f0f0f0;
+                    border-radius: 8px;
+                    padding-bottom: 8px;
+                }}
+            """
+        ):
+            with st.expander(label, expanded=False):
+                st.radio("¿Cumple?", ["No","Sí"], horizontal=True, key=f"{key}_si_demo")
+                st.text_area("Notas", key=f"{key}_notas_demo")
+                st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
 
-    st.markdown('</div>', unsafe_allow_html=True)
     st.info("Demo: este modo no guarda datos (solo visualiza el layout).")
 
 # ==================== TAREAS (placeholder) ====================
@@ -214,4 +204,6 @@ with tab_tareas:
 with tab_conf:
     st.subheader("Tiendas (demo)")
     st.dataframe(df_t, use_container_width=True)
+
+
 
