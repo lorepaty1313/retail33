@@ -41,7 +41,7 @@ CATEGORIAS = [
 ]
 BOOL_COLS = [f"{k}_si" for k,_ in CATEGORIAS]
 
-# Paleta pastel por categoría (para el header del expander)
+# Paleta pastel por categoría (para el wrapper)
 PASTEL = {
     "pasarela":        "#A7C7E7",  # azul
     "acomodo":         "#C6E2B5",  # verde
@@ -147,9 +147,11 @@ with tab_dash:
             )
 
     st.markdown("### 🔍 Detalle de hoy")
-    st.dataframe(df_hoy[["tienda_id","nombre","ciudad","estatus","score_visual","notas"]]
-                 .rename(columns={"score_visual":"score_visual_0_1"}),
-                 use_container_width=True)
+    st.dataframe(
+        df_hoy[["tienda_id","nombre","ciudad","estatus","score_visual","notas"]]
+        .rename(columns={"score_visual":"score_visual_0_1"}),
+        use_container_width=True
+    )
 
 # ==================== CAPTURA (demo) ====================
 with tab_captura:
@@ -161,13 +163,14 @@ with tab_captura:
 
     st.markdown("Visual (Sí/No, notas y foto opcional)")
 
-    # Expanders pastel perfectamente alineados (header coloreado)
+    # Expanders pastel perfectamente alineados (color en WRAPPER, header transparente)
     for key, label in CATEGORIAS:
         bg = PASTEL[key]
         with stylable_container(
             key=f"wrap_{key}",
             css_styles=f"""
                 {{
+                    background: {bg};
                     border: 1px solid #e8e8e8;
                     border-radius: 12px;
                     margin-bottom: 12px;
@@ -175,7 +178,7 @@ with tab_captura:
                     overflow: hidden;
                 }}
                 [data-testid="stExpander"] summary {{
-                    background: {bg} !important;
+                    background: transparent !important;
                     color: #4a4a4a !important;
                     font-weight: 700;
                     margin: 0 !important;
@@ -209,6 +212,5 @@ with tab_tareas:
 with tab_conf:
     st.subheader("Tiendas (demo)")
     st.dataframe(df_t, use_container_width=True)
-
 
 
