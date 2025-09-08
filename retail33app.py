@@ -6,7 +6,7 @@ import io, base64
 from PIL import Image
 
 # ---------------- CONFIG ----------------
-st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
+st.set_page_config(page_title="Retail 33 - Demo ", page_icon="🛍️", layout="wide")
 
 # ---------- Modelo de datos ----------
 TIENDAS_COLS = [
@@ -160,12 +160,12 @@ with tab_dash:
     score_prom = float(df_hoy["score_visual"].mean())
 
     colA, colB, colC = st.columns(3)
-    colA.metric("Cobertura auditoría (hoy)", f"{cobertura*100:,.0f}%")
-    colB.metric("Score visual promedio", f"{score_prom*100:,.1f}%")
-    colC.metric("Tiendas (filtro)", f"{tiendas_total}")
+    colA.metric("Visita (hoy)", f"{cobertura*100:,.0f}%")
+    colB.metric("Score", f"{score_prom*100:,.1f}%")
+    colC.metric("Tiendas)", f"{tiendas_total}")
 
     # Grid por tiendas
-    st.markdown("### 🗺️ Grid de tiendas (color por score visual de hoy)")
+    st.markdown(" Tiendas (color por score)")
     grid_cols = 3
     df_grid = df_t_filt.copy().sort_values("tienda_id")
     blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
@@ -203,14 +203,14 @@ with tab_dash:
 
 # ==================== CAPTURA (solo layout demo) ====================
 with tab_captura:
-    st.subheader("Captura auditoría (demo)")
+    st.subheader("Visita (demo)")
     col1, col2 = st.columns(2)
     fecha = col1.date_input("Fecha", dt.date.today())
     tienda_id = col2.selectbox("Tienda", df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist())
 
     notas = st.text_area("Notas generales")
 
-    st.markdown("### 👀 Auditoría visual (Sí/No, notas y foto opcional)")
+    st.markdown("Visual (Sí/No, notas y foto opcional)")
     for key, label in CATEGORIAS:
         with st.expander(label):
             st.radio("¿Cumple?", ["No","Sí"], horizontal=True, key=f"{key}_si_demo")
@@ -225,5 +225,5 @@ with tab_tareas:
 
 # ==================== CONFIGURACIÓN ====================
 with tab_conf:
-    st.subheader("Tiendas (demo)")
+    st.subheader("Tiendas (dejemplo)")
     st.dataframe(df_t, use_container_width=True)
