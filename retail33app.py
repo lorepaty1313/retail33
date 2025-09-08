@@ -232,7 +232,51 @@ with tab_dash:
     """
     st.markdown(css, unsafe_allow_html=True)
 
-
+    css_expand = """
+    <style>
+    div.streamlit-expander:nth-of-type(1) > div.streamlit-expanderHeader {
+        background-color: #A7C7E7 !important;  /* azul pastel */
+        color: #4a4a4a !important;
+        font-weight: bold;
+    }
+    div.streamlit-expander:nth-of-type(2) > div.streamlit-expanderHeader {
+        background-color: #C6E2B5 !important;  /* verde pastel */
+        color: #4a4a4a !important;
+        font-weight: bold;
+    }
+    div.streamlit-expander:nth-of-type(3) > div.streamlit-expanderHeader {
+        background-color: #F7C6C7 !important;  /* rosa pastel */
+        color: #4a4a4a !important;
+        font-weight: bold;
+    }
+    div.streamlit-expander:nth-of-type(4) > div.streamlit-expanderHeader {
+        background-color: #D9C2E9 !important;  /* lila pastel */
+        color: #4a4a4a !important;
+        font-weight: bold;
+    }
+    div.streamlit-expander:nth-of-type(5) > div.streamlit-expanderHeader {
+        background-color: #FFF3B0 !important;  /* amarillo pastel */
+        color: #4a4a4a !important;
+        font-weight: bold;
+    }
+    div.streamlit-expander:nth-of-type(6) > div.streamlit-expanderHeader {
+        background-color: #FFB5A7 !important;  /* coral pastel */
+        color: #4a4a4a !important;
+        font-weight: bold;
+    }
+    div.streamlit-expander:nth-of-type(7) > div.streamlit-expanderHeader {
+        background-color: #B5EAD7 !important;  /* menta pastel */
+        color: #4a4a4a !important;
+        font-weight: bold;
+    }
+    div.streamlit-expander:nth-of-type(8) > div.streamlit-expanderHeader {
+        background-color: #FFDAB9 !important;  /* durazno pastel */
+        color: #4a4a4a !important;
+        font-weight: bold;
+    }
+    </style>
+    """
+    st.markdown(css_expand, unsafe_allow_html=True)
     for block in blocks:
         cols = st.columns(len(block))
         for j, (_, r) in enumerate(block.iterrows()):
@@ -260,6 +304,7 @@ with tab_dash:
 # ==================== CAPTURA (solo layout demo) ====================
 with tab_captura:
     st.subheader("Visita (demo)")
+    st.markdown(css_expand, unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     fecha = col1.date_input("Fecha", dt.date.today())
     tienda_id = col2.selectbox("Tienda", df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist())
