@@ -6,138 +6,70 @@ import datetime as dt
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
 
-# ---- CSS Global: fondo blanco + texto gris (incluye tablas) y estilos base ----
+# ---- CSS Global: fondo blanco + texto gris ----
 css_global = """
 <style>
-/* Fondo y tipografía global */
-body, .stApp {
-  background-color: #ffffff !important;
-  color: #4a4a4a !important;
-  font-family: "Helvetica Neue", sans-serif;
+body, .stApp { background:#ffffff !important; color:#4a4a4a !important; font-family:"Helvetica Neue", sans-serif; }
+h1, h2, h3, h4, h5, h6 { color:#4a4a4a !important; }
+.stTextInput, .stNumberInput, .stSelectbox, .stTextArea, .stDateInput { background:#ffffff !important; color:#4a4a4a !important; }
+label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
+.stButton>button { background:#f6bd60; color:#4a4a4a !important; border-radius:8px; border:none; font-weight:700; }
+.stButton>button:hover { background:#f28482; color:#fff !important; }
+[data-testid="stMetricValue"]{ color:#4a4a4a !important; font-weight:800; }
+[data-testid="stMetricLabel"]{ color:#6d6d6d !important; }
+.dataframe, .stDataFrame, .stTable { background:#ffffff !important; color:#4a4a4a !important; }
+.stDataFrame div { color:#4a4a4a !important; }
+
+/* Tarjetas del grid */
+.store{ border-radius:10px; padding:12px; font-weight:700; text-align:center; color:#444; }
+.store small{ display:block; font-weight:400; }
+
+/* ====== Captura: pastel por contenedor ======
+   Pintamos el contenedor .cap-<categoria> y hacemos el header del expander transparente,
+   así el color se ve aunque Streamlit cambie el DOM interno. */
+#cap-expanders .cap-pasarela,
+#cap-expanders .cap-acomodo,
+#cap-expanders .cap-producto_nuevo,
+#cap-expanders .cap-producto_rebaja,
+#cap-expanders .cap-display,
+#cap-expanders .cap-maniquies,
+#cap-expanders .cap-zona_impulso,
+#cap-expanders .cap-area_ropa{
+  border-radius:10px; margin-bottom:10px; padding:6px; border:1px solid #e8e8e8;
+}
+/* Colores por categoría */
+#cap-expanders .cap-pasarela{ background:#A7C7E7 !important; }        /* azul pastel   */
+#cap-expanders .cap-acomodo{ background:#C6E2B5 !important; }         /* verde pastel  */
+#cap-expanders .cap-producto_nuevo{ background:#F7C6C7 !important; }  /* rosa pastel   */
+#cap-expanders .cap-producto_rebaja{ background:#D9C2E9 !important; } /* lila pastel   */
+#cap-expanders .cap-display{ background:#FFF3B0 !important; }         /* amarillo      */
+#cap-expanders .cap-maniquies{ background:#FFB5A7 !important; }       /* coral         */
+#cap-expanders .cap-zona_impulso{ background:#B5EAD7 !important; }    /* menta         */
+#cap-expanders .cap-area_ropa{ background:#FFDAB9 !important; }       /* durazno       */
+
+/* Hacemos el header del expander transparente para que se vea el pastel del contenedor */
+#cap-expanders [data-testid="stExpander"] summary,
+#cap-expanders .streamlit-expanderHeader{
+  background: transparent !important;
+  color:#4a4a4a !important;
+  font-weight:700;
+  border:none !important;
 }
 
-/* Títulos */
-h1, h2, h3, h4, h5, h6 {
-  color: #4a4a4a !important;
-}
-
-/* Widgets (inputs, select, textarea, date) */
-.stTextInput, .stNumberInput, .stSelectbox, .stTextArea, .stDateInput {
-  background-color: #ffffff !important;
-  color: #4a4a4a !important;
-}
-
-/* Labels / textos secundarios */
-label, .stMarkdown, .stCaption {
-  color: #4a4a4a !important;
-}
-
-/* Botones */
-.stButton>button {
-  background-color: #f6bd60; /* amarillo pastel */
-  color: #4a4a4a !important;
-  border-radius: 8px;
-  border: none;
-  font-weight: bold;
-}
-.stButton>button:hover {
-  background-color: #f28482; /* coral pastel */
-  color: #ffffff !important;
-}
-
-/* Métricas */
-[data-testid="stMetricValue"] {
-  color: #4a4a4a !important;
-  font-weight: 800;
-}
-[data-testid="stMetricLabel"] {
-  color: #6d6d6d !important;
-}
-
-/* Tablas / DataFrames */
-.dataframe, .stDataFrame, .stTable {
-  background-color: #ffffff !important;
-  color: #4a4a4a !important;
-}
-.stDataFrame div {
-  color: #4a4a4a !important;
-}
-
-/* Grid de tiendas (cuadritos) */
-.store {
-  border-radius: 10px;
-  padding: 12px;
-  font-weight: 700;
-  text-align: center;
-  color: #444; /* texto gris oscuro */
-}
-.store small {
-  display: block;
-  font-weight: 400;
+/* Cuerpo del expander blanco para inputs */
+#cap-expanders [data-testid="stExpander"] > div[role="region"],
+#cap-expanders .streamlit-expanderContent{
+  background:#ffffff !important;
+  border-radius:8px;
+  border:1px solid #f0f0f0;
+  padding-bottom:8px;
 }
 </style>
 """
 st.markdown(css_global, unsafe_allow_html=True)
 
-# ---- CSS para expanders pastel en Captura (scoped por contenedor y por clase) ----
-css_expand = """
-<style>
-/* Base del header (DOM nuevo y viejo) dentro del scope #cap-expanders */
-#cap-expanders [data-testid="stExpander"] summary,
-#cap-expanders .streamlit-expanderHeader {
-  color: #4a4a4a !important;
-  font-weight: 700;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
-  background: none !important; /* limpiamos estilos previos */
-}
-
-/* Un color por clase/categoría */
-#cap-expanders .cap-pasarela   [data-testid="stExpander"] summary,
-#cap-expanders .cap-pasarela   .streamlit-expanderHeader { background-color:#A7C7E7 !important; } /* azul */
-#cap-expanders .cap-acomodo    [data-testid="stExpander"] summary,
-#cap-expanders .cap-acomodo    .streamlit-expanderHeader { background-color:#C6E2B5 !important; } /* verde */
-#cap-expanders .cap-producto_nuevo [data-testid="stExpander"] summary,
-#cap-expanders .cap-producto_nuevo .streamlit-expanderHeader { background-color:#F7C6C7 !important; } /* rosa */
-#cap-expanders .cap-producto_rebaja [data-testid="stExpander"] summary,
-#cap-expanders .cap-producto_rebaja .streamlit-expanderHeader { background-color:#D9C2E9 !important; } /* lila */
-#cap-expanders .cap-display    [data-testid="stExpander"] summary,
-#cap-expanders .cap-display    .streamlit-expanderHeader { background-color:#FFF3B0 !important; } /* amarillo */
-#cap-expanders .cap-maniquies  [data-testid="stExpander"] summary,
-#cap-expanders .cap-maniquies  .streamlit-expanderHeader { background-color:#FFB5A7 !important; } /* coral */
-#cap-expanders .cap-zona_impulso [data-testid="stExpander"] summary,
-#cap-expanders .cap-zona_impulso .streamlit-expanderHeader { background-color:#B5EAD7 !important; } /* menta */
-#cap-expanders .cap-area_ropa  [data-testid="stExpander"] summary,
-#cap-expanders .cap-area_ropa  .streamlit-expanderHeader { background-color:#FFDAB9 !important; } /* durazno */
-
-/* Cuerpo del expander abierto: blanco limpio para inputs */
-#cap-expanders [data-testid="stExpander"] > div[role="region"],
-#cap-expanders .streamlit-expanderContent {
-  background:#ffffff !important;
-  border-left:1px solid #f0f0f0; border-right:1px solid #f0f0f0; border-bottom:1px solid #f0f0f0;
-  border-radius:0 0 8px 8px; padding-bottom:8px;
-}
-</style>
-"""
-st.markdown(css_expand, unsafe_allow_html=True)
-
-# ---------- Modelo de datos ----------
+# ---------- Datos demo ----------
 TIENDAS_COLS = ["tienda_id","nombre","ciudad","gerente","estatus"]
-
-CAPTURAS_COLS = [
-    "fecha","tienda_id","notas",
-    "pasarela_si","pasarela_notas",
-    "acomodo_si","acomodo_notas",
-    "producto_nuevo_si","producto_nuevo_notas",
-    "producto_rebaja_si","producto_rebaja_notas",
-    "display_si","display_notas",
-    "maniquies_si","maniquies_notas",
-    "zona_impulso_si","zona_impulso_notas",
-    "area_ropa_si","area_ropa_notas"
-]
-
-FOTOS_COLS = ["fecha","tienda_id","categoria","filename","mime","img_base64"]
-
 CATEGORIAS = [
     ("pasarela",       "Pasarela de la moda"),
     ("acomodo",        "Acomodo guía visual"),
@@ -148,10 +80,8 @@ CATEGORIAS = [
     ("zona_impulso",   "Zona impulso"),
     ("area_ropa",      "Área ropa"),
 ]
-LABEL_MAP = dict(CATEGORIAS)
-BOOL_COLS = [f"{k}_si" for k, _ in CATEGORIAS]
+BOOL_COLS = [f"{k}_si" for k,_ in CATEGORIAS]
 
-# ---------- Datos demo ----------
 def demo_data():
     df_t = pd.DataFrame([
         {"tienda_id":"T01","nombre":"Perisur","ciudad":"CDMX","gerente":"Ana","estatus":"abierta"},
@@ -160,66 +90,35 @@ def demo_data():
         {"tienda_id":"T04","nombre":"Universidad","ciudad":"CDMX","gerente":"Paco","estatus":"abierta"},
         {"tienda_id":"T05","nombre":"Puebla","ciudad":"PUE","gerente":"Sofía","estatus":"cerrada"},
     ])[TIENDAS_COLS]
-
     hoy = dt.date.today()
-    base = []
-    base.append({
-        "fecha":hoy,"tienda_id":"T01","notas":"Todo ok",
-        "pasarela_si":True, "pasarela_notas":"",
-        "acomodo_si":True, "acomodo_notas":"",
-        "producto_nuevo_si":True, "producto_nuevo_notas":"",
-        "producto_rebaja_si":True, "producto_rebaja_notas":"",
-        "display_si":True, "display_notas":"",
-        "maniquies_si":True, "maniquies_notas":"",
-        "zona_impulso_si":True, "zona_impulso_notas":"",
-        "area_ropa_si":True, "area_ropa_notas":""
-    })
-    base.append({
-        "fecha":hoy,"tienda_id":"T02","notas":"Faltan productos en zona impulso",
-        "pasarela_si":True, "pasarela_notas":"",
-        "acomodo_si":True, "acomodo_notas":"",
-        "producto_nuevo_si":False, "producto_nuevo_notas":"No señalado",
-        "producto_rebaja_si":True, "producto_rebaja_notas":"",
-        "display_si":False, "display_notas":"Desorden",
-        "maniquies_si":True, "maniquies_notas":"",
-        "zona_impulso_si":False, "zona_impulso_notas":"Sin material",
-        "area_ropa_si":True, "area_ropa_notas":""
-    })
-    base.append({
-        "fecha":hoy,"tienda_id":"T03","notas":"Requiere acomodo",
-        "pasarela_si":False, "pasarela_notas":"Sin montaje",
-        "acomodo_si":False, "acomodo_notas":"Guía no seguida",
-        "producto_nuevo_si":False, "producto_nuevo_notas":"No visible",
-        "producto_rebaja_si":True, "producto_rebaja_notas":"",
-        "display_si":False, "display_notas":"Faltan etiquetas",
-        "maniquies_si":True, "maniquies_notas":"",
-        "zona_impulso_si":False, "zona_impulso_notas":"",
-        "area_ropa_si":True, "area_ropa_notas":""
-    })
-    df_c = pd.DataFrame(base)[CAPTURAS_COLS]
-    df_f = pd.DataFrame(columns=FOTOS_COLS)
-    return df_t, df_c, df_f
+    base = [
+        {"fecha":hoy,"tienda_id":"T01","notas":"Todo ok",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
+         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T02","notas":"Faltan en zona impulso",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":False,"producto_rebaja_si":True,
+         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T03","notas":"Requiere acomodo",
+         "pasarela_si":False,"acomodo_si":False,"producto_nuevo_si":False,"producto_rebaja_si":True,
+         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
+    ]
+    df_c = pd.DataFrame(base)
+    return df_t, df_c
 
-df_t, df_c, df_f = demo_data()
+df_t, df_c = demo_data()
 
 # ------------------- UI -------------------
 st.title("🛍️ Retail 33 — Demo Visual (sin Sheets)")
 
-# --------- Sidebar filtros ----------
+# Filtros
 st.sidebar.header("Filtros")
-ciudades = ["Todas"] + sorted(df_t["ciudad"].dropna().unique().tolist())
-ciudad_sel = st.sidebar.selectbox("Ciudad", ciudades, index=0)
-
-estatuses = ["Todos"] + sorted(df_t["estatus"].dropna().unique().tolist())
-estatus_sel = st.sidebar.selectbox("Estatus", estatuses, index=0)
-
+ciudad_sel = st.sidebar.selectbox("Ciudad", ["Todas"] + sorted(df_t["ciudad"].unique()))
+estatus_sel = st.sidebar.selectbox("Estatus", ["Todos"] + sorted(df_t["estatus"].unique()))
 df_t_filt = df_t.copy()
-if ciudad_sel != "Todas":
-    df_t_filt = df_t_filt[df_t_filt["ciudad"] == ciudad_sel]
-if estatus_sel != "Todos":
-    df_t_filt = df_t_filt[df_t_filt["estatus"] == estatus_sel]
+if ciudad_sel != "Todas": df_t_filt = df_t_filt[df_t_filt["ciudad"] == ciudad_sel]
+if estatus_sel != "Todos": df_t_filt = df_t_filt[df_t_filt["estatus"] == estatus_sel]
 
-# --------- Tabs ---------
+# Tabs
 tab_dash, tab_captura, tab_tareas, tab_conf = st.tabs(["📊 Dashboard", "📝 Captura diaria", "✅ Tareas", "⚙️ Configuración"])
 
 # ==================== DASHBOARD ====================
@@ -227,57 +126,47 @@ with tab_dash:
     st.subheader("Resumen visual (hoy)")
     hoy = dt.date.today()
 
-    # Merge capturas de hoy a tiendas
     df_hoy = df_t[["tienda_id","nombre","ciudad","estatus"]].merge(
         df_c[df_c["fecha"] == hoy], on="tienda_id", how="left"
     )
 
-    # Score visual = promedio de checks (True=1, False/NaN=0)
     def score_row(r):
         vals = [(1.0 if bool(r.get(col)) else 0.0) for col in BOOL_COLS]
         return np.mean(vals) if len(vals) else 0.0
 
     df_hoy["score_visual"] = df_hoy.apply(score_row, axis=1)
 
-    # Color pastel por score (gris si no hay captura)
     def color_from_score(score, has_data):
-        if not has_data:
-            return "#E5E5E5"  # gris pastel
-        if score >= 0.8:
-            return "#A8D5BA"  # verde menta pastel
-        if score >= 0.5:
-            return "#FFF3B0"  # amarillo mantequilla
-        return "#FFB5A7"      # coral pastel
+        if not has_data: return "#E5E5E5"
+        if score >= 0.8: return "#A8D5BA"
+        if score >= 0.5: return "#FFF3B0"
+        return "#FFB5A7"
 
     has_data = df_hoy[BOOL_COLS].notna().any(axis=1)
     df_hoy["color"] = [color_from_score(s, d) for s, d in zip(df_hoy["score_visual"], has_data)]
 
-    # KPIs
     tiendas_total = len(df_t_filt)
     cobertura = int(has_data.sum()) / max(len(df_hoy), 1)
     score_prom = float(df_hoy["score_visual"].mean())
 
-    colA, colB, colC = st.columns(3)
-    colA.metric("Visita (hoy)", f"{cobertura*100:,.0f}%")
-    colB.metric("Score promedio", f"{score_prom*100:,.1f}%")
-    colC.metric("Tiendas (filtro)", f"{tiendas_total}")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Visita (hoy)", f"{cobertura*100:,.0f}%")
+    c2.metric("Score promedio", f"{score_prom*100:,.1f}%")
+    c3.metric("Tiendas (filtro)", f"{tiendas_total}")
 
-    # Grid por tiendas
     st.markdown("### 🛍️ Tiendas (color por score)")
-
     grid_cols = 3
-    df_grid = df_t_filt.copy().sort_values("tienda_id")
+    df_grid = df_t_filt.sort_values("tienda_id")
     blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
-
     for block in blocks:
         cols = st.columns(len(block))
         for j, (_, r) in enumerate(block.iterrows()):
             row_hoy = df_hoy[df_hoy["tienda_id"] == r["tienda_id"]]
             if row_hoy.empty:
-                color = "#E5E5E5"; sc = 0
+                color, sc = "#E5E5E5", 0
             else:
                 color = row_hoy["color"].values[0]
-                sc = float(row_hoy["score_visual"].values[0])*100
+                sc = float(row_hoy["score_visual"].values[0]) * 100
             cols[j].markdown(
                 f"""<div class="store" style="background:{color}">
                 {r['tienda_id']}<small>{r['nombre']}</small>
@@ -287,28 +176,25 @@ with tab_dash:
             )
 
     st.markdown("### 🔍 Detalle de hoy")
-    st.dataframe(
-        df_hoy[["tienda_id","nombre","ciudad","estatus","score_visual","notas"]]
-        .rename(columns={"score_visual":"score_visual_0_1"}),
-        use_container_width=True
-    )
+    st.dataframe(df_hoy[["tienda_id","nombre","ciudad","estatus","score_visual","notas"]]
+                 .rename(columns={"score_visual":"score_visual_0_1"}),
+                 use_container_width=True)
 
 # ==================== CAPTURA (demo) ====================
 with tab_captura:
     st.subheader("Visita (demo)")
-    col1, col2 = st.columns(2)
-    fecha = col1.date_input("Fecha", dt.date.today())
-    tienda_id = col2.selectbox("Tienda", df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist())
-    notas = st.text_area("Notas generales")
+    c1, c2 = st.columns(2)
+    fecha = c1.date_input("Fecha", dt.date.today())
+    tienda_id = c2.selectbox("Tienda", df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist())
+    st.text_area("Notas generales")
 
     st.markdown("Visual (Sí/No, notas y foto opcional)")
 
-    # Contenedor scopeado para colorear cada expander por clase
+    # Contenedor scopeado y coloreado por CLASE (no por nth-of-type)
     st.markdown('<div id="cap-expanders">', unsafe_allow_html=True)
 
     for key, label in CATEGORIAS:
-        # wrapper con clase por categoría
-        st.markdown(f'<div class="cap-{key}">', unsafe_allow_html=True)
+        st.markdown(f'<div class="cap-{key}">', unsafe_allow_html=True)   # <- contenedor pastel
         with st.expander(label):
             st.radio("¿Cumple?", ["No","Sí"], horizontal=True, key=f"{key}_si_demo")
             st.text_area("Notas", key=f"{key}_notas_demo")
@@ -316,7 +202,6 @@ with tab_captura:
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
-
     st.info("Demo: este modo no guarda datos (solo visualiza el layout).")
 
 # ==================== TAREAS (placeholder) ====================
