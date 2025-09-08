@@ -23,50 +23,51 @@ label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
 /* Tarjetas del grid */
 .store{ border-radius:10px; padding:12px; font-weight:700; text-align:center; color:#444; }
 .store small{ display:block; font-weight:400; }
+</style>
+"""
+st.markdown(css_global, unsafe_allow_html=True)
 
-/* ====== Captura: pastel por contenedor ======
-   Pintamos el contenedor .cap-<categoria> y hacemos el header del expander transparente,
-   así el color se ve aunque Streamlit cambie el DOM interno. */
-#cap-expanders .cap-pasarela,
-#cap-expanders .cap-acomodo,
-#cap-expanders .cap-producto_nuevo,
-#cap-expanders .cap-producto_rebaja,
-#cap-expanders .cap-display,
-#cap-expanders .cap-maniquies,
-#cap-expanders .cap-zona_impulso,
-#cap-expanders .cap-area_ropa{
-  border-radius:10px; margin-bottom:10px; padding:6px; border:1px solid #e8e8e8;
-}
-/* Colores por categoría */
-#cap-expanders .cap-pasarela{ background:#A7C7E7 !important; }        /* azul pastel   */
-#cap-expanders .cap-acomodo{ background:#C6E2B5 !important; }         /* verde pastel  */
-#cap-expanders .cap-producto_nuevo{ background:#F7C6C7 !important; }  /* rosa pastel   */
-#cap-expanders .cap-producto_rebaja{ background:#D9C2E9 !important; } /* lila pastel   */
-#cap-expanders .cap-display{ background:#FFF3B0 !important; }         /* amarillo      */
-#cap-expanders .cap-maniquies{ background:#FFB5A7 !important; }       /* coral         */
-#cap-expanders .cap-zona_impulso{ background:#B5EAD7 !important; }    /* menta         */
-#cap-expanders .cap-area_ropa{ background:#FFDAB9 !important; }       /* durazno       */
-
-/* Hacemos el header del expander transparente para que se vea el pastel del contenedor */
-#cap-expanders [data-testid="stExpander"] summary,
-#cap-expanders .streamlit-expanderHeader{
-  background: transparent !important;
+# ---- CSS: colores pastel por expander usando ANCLAS adyacentes ----
+css_expand = """
+<style>
+/* Base del header del expander dentro del panel de captura */
+#cap-panel [data-testid="stExpander"] summary,
+#cap-panel .streamlit-expanderHeader{
   color:#4a4a4a !important;
   font-weight:700;
-  border:none !important;
+  border-radius:8px;
+  border:1px solid #e8e8e8;
 }
 
+/* Pintamos cada expander según su ancla previa (#exp-<key>) */
+#exp-pasarela + div [data-testid="stExpander"] summary,
+#exp-pasarela + div .streamlit-expanderHeader { background:#A7C7E7 !important; }  /* azul */
+#exp-acomodo + div [data-testid="stExpander"] summary,
+#exp-acomodo + div .streamlit-expanderHeader { background:#C6E2B5 !important; }   /* verde */
+#exp-producto_nuevo + div [data-testid="stExpander"] summary,
+#exp-producto_nuevo + div .streamlit-expanderHeader { background:#F7C6C7 !important; } /* rosa */
+#exp-producto_rebaja + div [data-testid="stExpander"] summary,
+#exp-producto_rebaja + div .streamlit-expanderHeader { background:#D9C2E9 !important; } /* lila */
+#exp-display + div [data-testid="stExpander"] summary,
+#exp-display + div .streamlit-expanderHeader { background:#FFF3B0 !important; }   /* amarillo */
+#exp-maniquies + div [data-testid="stExpander"] summary,
+#exp-maniquies + div .streamlit-expanderHeader { background:#FFB5A7 !important; } /* coral */
+#exp-zona_impulso + div [data-testid="stExpander"] summary,
+#exp-zona_impulso + div .streamlit-expanderHeader { background:#B5EAD7 !important; } /* menta */
+#exp-area_ropa + div [data-testid="stExpander"] summary,
+#exp-area_ropa + div .streamlit-expanderHeader { background:#FFDAB9 !important; } /* durazno */
+
 /* Cuerpo del expander blanco para inputs */
-#cap-expanders [data-testid="stExpander"] > div[role="region"],
-#cap-expanders .streamlit-expanderContent{
+#cap-panel [data-testid="stExpander"] > div[role="region"],
+#cap-panel .streamlit-expanderContent{
   background:#ffffff !important;
-  border-radius:8px;
   border:1px solid #f0f0f0;
+  border-radius:8px;
   padding-bottom:8px;
 }
 </style>
 """
-st.markdown(css_global, unsafe_allow_html=True)
+st.markdown(css_expand, unsafe_allow_html=True)
 
 # ---------- Datos demo ----------
 TIENDAS_COLS = ["tienda_id","nombre","ciudad","gerente","estatus"]
@@ -190,16 +191,16 @@ with tab_captura:
 
     st.markdown("Visual (Sí/No, notas y foto opcional)")
 
-    # Contenedor scopeado y coloreado por CLASE (no por nth-of-type)
-    st.markdown('<div id="cap-expanders">', unsafe_allow_html=True)
+    # Panel scopeado para aplicar las reglas CSS
+    st.markdown('<div id="cap-panel">', unsafe_allow_html=True)
 
+    # ANCLA + expander por categoría (el CSS apunta a '#exp-<key> + div ...')
     for key, label in CATEGORIAS:
-        st.markdown(f'<div class="cap-{key}">', unsafe_allow_html=True)   # <- contenedor pastel
+        st.markdown(f'<div id="exp-{key}"></div>', unsafe_allow_html=True)
         with st.expander(label):
             st.radio("¿Cumple?", ["No","Sí"], horizontal=True, key=f"{key}_si_demo")
             st.text_area("Notas", key=f"{key}_notas_demo")
             st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.info("Demo: este modo no guarda datos (solo visualiza el layout).")
@@ -213,3 +214,4 @@ with tab_tareas:
 with tab_conf:
     st.subheader("Tiendas (demo)")
     st.dataframe(df_t, use_container_width=True)
+
