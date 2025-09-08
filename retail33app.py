@@ -172,72 +172,66 @@ with tab_dash:
     blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
     
     # ---- CSS Pastel ----
+    # ---- CSS Blanco + Texto Gris ----
     css = """
     <style>
     /* Fondo general */
     body, .stApp {
-        background-color: #fcfcfc;
+        background-color: #ffffff !important;
+        color: #4a4a4a !important;  /* gris oscuro */
         font-family: "Helvetica Neue", sans-serif;
-        color: #5b5b5b;
     }
     
     /* Títulos */
-    h1, h2, h3, h4 {
-        color: #b56576; /* rosado pastel */
+    h1, h2, h3, h4, h5, h6 {
+        color: #4a4a4a !important;  /* gris */
     }
     
-    /* Métricas */
-    [data-testid="stMetricValue"] {
-        color: #6d597a; /* lavanda pastel */
-        font-weight: bold;
-    }
-    [data-testid="stMetricLabel"] {
-        color: #84a59d; /* verde menta */
-    }
-    
-    /* Expansores */
-    .streamlit-expanderHeader {
-        background-color: #fdf1f1 !important;
-        color: #5b5b5b !important;
-        font-weight: bold;
-        border-radius: 6px;
-    }
-    
-    /* Inputs */
+    /* Widgets (inputs, select, text areas) */
     .stTextInput, .stNumberInput, .stSelectbox, .stTextArea, .stDateInput {
-        background-color: #fffaf6;
-        color: #5b5b5b;
+        background-color: #ffffff !important;
+        color: #4a4a4a !important;
+    }
+    
+    /* Labels de inputs */
+    label, .css-16huue1, .stMarkdown, .stCaption {
+        color: #4a4a4a !important;
     }
     
     /* Botones */
     .stButton>button {
         background-color: #f6bd60; /* amarillo pastel */
-        color: #fff;
+        color: #4a4a4a !important; /* texto gris */
         border-radius: 8px;
         border: none;
         font-weight: bold;
     }
     .stButton>button:hover {
-        background-color: #f28482; /* coral */
-        color: white;
+        background-color: #f28482; /* coral pastel */
+        color: #ffffff !important; /* texto blanco al hover */
     }
     
-    /* Grid de tiendas */
-    .store {
-        border-radius: 10px;
-        padding: 10px;
-        font-weight: 700;
-        text-align: center;
-        color: #444; /* texto gris oscuro */
+    /* Expansores */
+    .streamlit-expanderHeader {
+        background-color: #ffffff !important;
+        color: #4a4a4a !important;
+        font-weight: bold;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
     }
-    .store small {
-        display: block;
-        font-weight: 400;
+    
+    /* Tablas (dataframes) */
+    .dataframe, .stDataFrame, .stTable {
+        background-color: #ffffff !important;
+        color: #4a4a4a !important;
+    }
+    .stDataFrame div {
+        color: #4a4a4a !important;
     }
     </style>
-
     """
     st.markdown(css, unsafe_allow_html=True)
+
 
     for block in blocks:
         cols = st.columns(len(block))
