@@ -79,60 +79,50 @@ label, .stMarkdown, .stCaption {
 """
 st.markdown(css_global, unsafe_allow_html=True)
 
-# ---- CSS para expanders pastel en Captura (scoped por contenedor) ----
-# Usa data-testid="stExpander" (DOM nuevo) y también clases antiguas como fallback
+# ---- CSS para expanders pastel en Captura (scoped por contenedor y por clase) ----
 css_expand = """
 <style>
-/* Reset base del header del expander dentro del scope de captura */
+/* Base del header (DOM nuevo y viejo) dentro del scope #cap-expanders */
 #cap-expanders [data-testid="stExpander"] summary,
 #cap-expanders .streamlit-expanderHeader {
   color: #4a4a4a !important;
   font-weight: 700;
   border-radius: 8px;
   border: 1px solid #e8e8e8;
-  /* anulamos gradientes/colores previos */
-  background: none !important;
-  background-color: #ffffff !important;
+  background: none !important; /* limpiamos estilos previos */
 }
 
-/* Color por orden (1..8) — DOM nuevo */
-#cap-expanders [data-testid="stExpander"]:nth-of-type(1) summary { background-color: #A7C7E7 !important; } /* azul pastel */
-#cap-expanders [data-testid="stExpander"]:nth-of-type(2) summary { background-color: #C6E2B5 !important; } /* verde pastel */
-#cap-expanders [data-testid="stExpander"]:nth-of-type(3) summary { background-color: #F7C6C7 !important; } /* rosa pastel */
-#cap-expanders [data-testid="stExpander"]:nth-of-type(4) summary { background-color: #D9C2E9 !important; } /* lila pastel */
-#cap-expanders [data-testid="stExpander"]:nth-of-type(5) summary { background-color: #FFF3B0 !important; } /* amarillo pastel */
-#cap-expanders [data-testid="stExpander"]:nth-of-type(6) summary { background-color: #FFB5A7 !important; } /* coral pastel */
-#cap-expanders [data-testid="stExpander"]:nth-of-type(7) summary { background-color: #B5EAD7 !important; } /* menta pastel */
-#cap-expanders [data-testid="stExpander"]:nth-of-type(8) summary { background-color: #FFDAB9 !important; } /* durazno pastel */
+/* Un color por clase/categoría */
+#cap-expanders .cap-pasarela   [data-testid="stExpander"] summary,
+#cap-expanders .cap-pasarela   .streamlit-expanderHeader { background-color:#A7C7E7 !important; } /* azul */
+#cap-expanders .cap-acomodo    [data-testid="stExpander"] summary,
+#cap-expanders .cap-acomodo    .streamlit-expanderHeader { background-color:#C6E2B5 !important; } /* verde */
+#cap-expanders .cap-producto_nuevo [data-testid="stExpander"] summary,
+#cap-expanders .cap-producto_nuevo .streamlit-expanderHeader { background-color:#F7C6C7 !important; } /* rosa */
+#cap-expanders .cap-producto_rebaja [data-testid="stExpander"] summary,
+#cap-expanders .cap-producto_rebaja .streamlit-expanderHeader { background-color:#D9C2E9 !important; } /* lila */
+#cap-expanders .cap-display    [data-testid="stExpander"] summary,
+#cap-expanders .cap-display    .streamlit-expanderHeader { background-color:#FFF3B0 !important; } /* amarillo */
+#cap-expanders .cap-maniquies  [data-testid="stExpander"] summary,
+#cap-expanders .cap-maniquies  .streamlit-expanderHeader { background-color:#FFB5A7 !important; } /* coral */
+#cap-expanders .cap-zona_impulso [data-testid="stExpander"] summary,
+#cap-expanders .cap-zona_impulso .streamlit-expanderHeader { background-color:#B5EAD7 !important; } /* menta */
+#cap-expanders .cap-area_ropa  [data-testid="stExpander"] summary,
+#cap-expanders .cap-area_ropa  .streamlit-expanderHeader { background-color:#FFDAB9 !important; } /* durazno */
 
-/* Fallback DOM viejo (por si tu entorno usa clases antiguas) */
-#cap-expanders .streamlit-expander:nth-of-type(1) > .streamlit-expanderHeader { background-color: #A7C7E7 !important; }
-#cap-expanders .streamlit-expander:nth-of-type(2) > .streamlit-expanderHeader { background-color: #C6E2B5 !important; }
-#cap-expanders .streamlit-expander:nth-of-type(3) > .streamlit-expanderHeader { background-color: #F7C6C7 !important; }
-#cap-expanders .streamlit-expander:nth-of-type(4) > .streamlit-expanderHeader { background-color: #D9C2E9 !important; }
-#cap-expanders .streamlit-expander:nth-of-type(5) > .streamlit-expanderHeader { background-color: #FFF3B0 !important; }
-#cap-expanders .streamlit-expander:nth-of-type(6) > .streamlit-expanderHeader { background-color: #FFB5A7 !important; }
-#cap-expanders .streamlit-expander:nth-of-type(7) > .streamlit-expanderHeader { background-color: #B5EAD7 !important; }
-#cap-expanders .streamlit-expander:nth-of-type(8) > .streamlit-expanderHeader { background-color: #FFDAB9 !important; }
-
-/* Cuerpo del expander: blanco limpio para inputs */
+/* Cuerpo del expander abierto: blanco limpio para inputs */
 #cap-expanders [data-testid="stExpander"] > div[role="region"],
 #cap-expanders .streamlit-expanderContent {
-  background: #ffffff !important;
-  border-left: 1px solid #f0f0f0;
-  border-right: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
-  border-radius: 0 0 8px 8px;
-  padding-bottom: 8px;
+  background:#ffffff !important;
+  border-left:1px solid #f0f0f0; border-right:1px solid #f0f0f0; border-bottom:1px solid #f0f0f0;
+  border-radius:0 0 8px 8px; padding-bottom:8px;
 }
 </style>
 """
 st.markdown(css_expand, unsafe_allow_html=True)
 
 # ---------- Modelo de datos ----------
-TIENDAS_COLS = [
-    "tienda_id","nombre","ciudad","gerente","estatus"
-]
+TIENDAS_COLS = ["tienda_id","nombre","ciudad","gerente","estatus"]
 
 CAPTURAS_COLS = [
     "fecha","tienda_id","notas",
@@ -146,9 +136,7 @@ CAPTURAS_COLS = [
     "area_ropa_si","area_ropa_notas"
 ]
 
-FOTOS_COLS = [
-    "fecha","tienda_id","categoria","filename","mime","img_base64"
-]
+FOTOS_COLS = ["fecha","tienda_id","categoria","filename","mime","img_base64"]
 
 CATEGORIAS = [
     ("pasarela",       "Pasarela de la moda"),
@@ -315,13 +303,18 @@ with tab_captura:
 
     st.markdown("Visual (Sí/No, notas y foto opcional)")
 
-    # Contenedor scopeado para colorear cada expander por orden
+    # Contenedor scopeado para colorear cada expander por clase
     st.markdown('<div id="cap-expanders">', unsafe_allow_html=True)
+
     for key, label in CATEGORIAS:
+        # wrapper con clase por categoría
+        st.markdown(f'<div class="cap-{key}">', unsafe_allow_html=True)
         with st.expander(label):
             st.radio("¿Cumple?", ["No","Sí"], horizontal=True, key=f"{key}_si_demo")
             st.text_area("Notas", key=f"{key}_notas_demo")
             st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
+        st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.info("Demo: este modo no guarda datos (solo visualiza el layout).")
@@ -335,4 +328,3 @@ with tab_tareas:
 with tab_conf:
     st.subheader("Tiendas (demo)")
     st.dataframe(df_t, use_container_width=True)
-
