@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime as dt
-import io, base64
-from PIL import Image
 
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
@@ -82,55 +80,45 @@ label, .stMarkdown, .stCaption {
 st.markdown(css_global, unsafe_allow_html=True)
 
 # ---- CSS para expanders pastel en Captura (scoped por contenedor) ----
+# Usa data-testid="stExpander" (DOM nuevo) y también clases antiguas como fallback
 css_expand = """
 <style>
-/* Base del header en versiones nuevas/viejas */
-#cap-expanders details > summary,
+/* Reset base del header del expander dentro del scope de captura */
+#cap-expanders [data-testid="stExpander"] summary,
 #cap-expanders .streamlit-expanderHeader {
   color: #4a4a4a !important;
   font-weight: 700;
   border-radius: 8px;
   border: 1px solid #e8e8e8;
+  /* anulamos gradientes/colores previos */
+  background: none !important;
+  background-color: #ffffff !important;
 }
 
-/* 1..8 por orden dentro de #cap-expanders */
-#cap-expanders details:nth-of-type(1) > summary,
-#cap-expanders .streamlit-expander:nth-of-type(1) > .streamlit-expanderHeader {
-  background: #A7C7E7 !important; /* azul pastel */
-}
-#cap-expanders details:nth-of-type(2) > summary,
-#cap-expanders .streamlit-expander:nth-of-type(2) > .streamlit-expanderHeader {
-  background: #C6E2B5 !important; /* verde pastel */
-}
-#cap-expanders details:nth-of-type(3) > summary,
-#cap-expanders .streamlit-expander:nth-of-type(3) > .streamlit-expanderHeader {
-  background: #F7C6C7 !important; /* rosa pastel */
-}
-#cap-expanders details:nth-of-type(4) > summary,
-#cap-expanders .streamlit-expander:nth-of-type(4) > .streamlit-expanderHeader {
-  background: #D9C2E9 !important; /* lila pastel */
-}
-#cap-expanders details:nth-of-type(5) > summary,
-#cap-expanders .streamlit-expander:nth-of-type(5) > .streamlit-expanderHeader {
-  background: #FFF3B0 !important; /* amarillo pastel */
-}
-#cap-expanders details:nth-of-type(6) > summary,
-#cap-expanders .streamlit-expander:nth-of-type(6) > .streamlit-expanderHeader {
-  background: #FFB5A7 !important; /* coral pastel */
-}
-#cap-expanders details:nth-of-type(7) > summary,
-#cap-expanders .streamlit-expander:nth-of-type(7) > .streamlit-expanderHeader {
-  background: #B5EAD7 !important; /* menta pastel */
-}
-#cap-expanders details:nth-of-type(8) > summary,
-#cap-expanders .streamlit-expander:nth-of-type(8) > .streamlit-expanderHeader {
-  background: #FFDAB9 !important; /* durazno pastel */
-}
+/* Color por orden (1..8) — DOM nuevo */
+#cap-expanders [data-testid="stExpander"]:nth-of-type(1) summary { background-color: #A7C7E7 !important; } /* azul pastel */
+#cap-expanders [data-testid="stExpander"]:nth-of-type(2) summary { background-color: #C6E2B5 !important; } /* verde pastel */
+#cap-expanders [data-testid="stExpander"]:nth-of-type(3) summary { background-color: #F7C6C7 !important; } /* rosa pastel */
+#cap-expanders [data-testid="stExpander"]:nth-of-type(4) summary { background-color: #D9C2E9 !important; } /* lila pastel */
+#cap-expanders [data-testid="stExpander"]:nth-of-type(5) summary { background-color: #FFF3B0 !important; } /* amarillo pastel */
+#cap-expanders [data-testid="stExpander"]:nth-of-type(6) summary { background-color: #FFB5A7 !important; } /* coral pastel */
+#cap-expanders [data-testid="stExpander"]:nth-of-type(7) summary { background-color: #B5EAD7 !important; } /* menta pastel */
+#cap-expanders [data-testid="stExpander"]:nth-of-type(8) summary { background-color: #FFDAB9 !important; } /* durazno pastel */
+
+/* Fallback DOM viejo (por si tu entorno usa clases antiguas) */
+#cap-expanders .streamlit-expander:nth-of-type(1) > .streamlit-expanderHeader { background-color: #A7C7E7 !important; }
+#cap-expanders .streamlit-expander:nth-of-type(2) > .streamlit-expanderHeader { background-color: #C6E2B5 !important; }
+#cap-expanders .streamlit-expander:nth-of-type(3) > .streamlit-expanderHeader { background-color: #F7C6C7 !important; }
+#cap-expanders .streamlit-expander:nth-of-type(4) > .streamlit-expanderHeader { background-color: #D9C2E9 !important; }
+#cap-expanders .streamlit-expander:nth-of-type(5) > .streamlit-expanderHeader { background-color: #FFF3B0 !important; }
+#cap-expanders .streamlit-expander:nth-of-type(6) > .streamlit-expanderHeader { background-color: #FFB5A7 !important; }
+#cap-expanders .streamlit-expander:nth-of-type(7) > .streamlit-expanderHeader { background-color: #B5EAD7 !important; }
+#cap-expanders .streamlit-expander:nth-of-type(8) > .streamlit-expanderHeader { background-color: #FFDAB9 !important; }
 
 /* Cuerpo del expander: blanco limpio para inputs */
-#cap-expanders details[open] > div,
+#cap-expanders [data-testid="stExpander"] > div[role="region"],
 #cap-expanders .streamlit-expanderContent {
-  background: #ffffff;
+  background: #ffffff !important;
   border-left: 1px solid #f0f0f0;
   border-right: 1px solid #f0f0f0;
   border-bottom: 1px solid #f0f0f0;
@@ -146,7 +134,6 @@ TIENDAS_COLS = [
     "tienda_id","nombre","ciudad","gerente","estatus"
 ]
 
-# Captura centrada en auditoría visual (sin ventas)
 CAPTURAS_COLS = [
     "fecha","tienda_id","notas",
     "pasarela_si","pasarela_notas",
@@ -328,7 +315,7 @@ with tab_captura:
 
     st.markdown("Visual (Sí/No, notas y foto opcional)")
 
-    # Contenedor scropeado para colorear cada expander por orden
+    # Contenedor scopeado para colorear cada expander por orden
     st.markdown('<div id="cap-expanders">', unsafe_allow_html=True)
     for key, label in CATEGORIAS:
         with st.expander(label):
@@ -348,3 +335,4 @@ with tab_tareas:
 with tab_conf:
     st.subheader("Tiendas (demo)")
     st.dataframe(df_t, use_container_width=True)
+
