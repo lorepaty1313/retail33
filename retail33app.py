@@ -7,7 +7,7 @@ from streamlit_extras.stylable_container import stylable_container
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
 
-# ---- CSS Global (solo estilo visual; navegación con botones puros) ----
+# ---- CSS ----
 st.markdown("""
 <style>
 body, .stApp { background:#ffffff !important; color:#4a4a4a !important; font-family:"Helvetica Neue", sans-serif; }
@@ -23,6 +23,50 @@ h1, h2, h3, h4, h5, h6 { color:#4a4a4a !important; }
 
 # ---------- Datos demo / modelo ----------
 TIENDAS_COLS = ["tienda_id","nombre","ciudad","gerente","estatus"]
+
+# 33 tiendas (T01..T33)
+def demo_data():
+    ciudades = ["CDMX","PUE","GDL","MTY","QRO","MEX"]
+    gerentes = ["Ana","Luis","Marta","Paco","Sofía","Diego","Lucía","Carlos"]
+    rows = []
+    for i in range(1, 34):
+        tid = f"T{i:02d}"
+        rows.append({
+            "tienda_id": tid,
+            "nombre": f"Tienda {i:02d}",
+            "ciudad": ciudades[(i-1) % len(ciudades)],
+            "gerente": gerentes[(i-1) % len(gerentes)],
+            "estatus": "abierta" if (i % 7) else "cerrada"
+        })
+    df_t = pd.DataFrame(rows)[TIENDAS_COLS]
+
+    hoy = dt.date.today()
+    base = [
+        {"fecha":hoy,"tienda_id":"T01","notas":"Todo ok",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
+         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T02","notas":"Faltan en zona impulso",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":False,"producto_rebaja_si":True,
+         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T03","notas":"Requiere acomodo",
+         "pasarela_si":False,"acomodo_si":False,"producto_nuevo_si":False,"producto_rebaja_si":True,
+         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T10","notas":"Bien vitrina",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":False,
+         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T15","notas":"Reponer maniquí",
+         "pasarela_si":True,"acomodo_si":False,"producto_nuevo_si":True,"producto_rebaja_si":True,
+         "display_si":True,"maniquies_si":False,"zona_impulso_si":True,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T22","notas":"Área ropa con huecos",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
+         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":False},
+    ]
+    df_c = pd.DataFrame(base)
+    return df_t, df_c
+
+df_t, df_c = demo_data()
+
+# Categorías y colores
 CATEGORIAS = [
     ("pasarela",       "Pasarela de la moda"),
     ("acomodo",        "Acomodo guía visual"),
@@ -34,66 +78,11 @@ CATEGORIAS = [
     ("area_ropa",      "Área ropa"),
 ]
 BOOL_COLS = [f"{k}_si" for k,_ in CATEGORIAS]
-
 PASTEL = {
-    "pasarela":        "#A7C7E7",
-    "acomodo":         "#C6E2B5",
-    "producto_nuevo":  "#F7C6C7",
-    "producto_rebaja": "#D9C2E9",
-    "display":         "#FFF3B0",
-    "maniquies":       "#FFB5A7",
-    "zona_impulso":    "#B5EAD7",
-    "area_ropa":       "#FFDAB9",
+    "pasarela": "#A7C7E7", "acomodo": "#C6E2B5", "producto_nuevo": "#F7C6C7",
+    "producto_rebaja": "#D9C2E9", "display": "#FFF3B0", "maniquies": "#FFB5A7",
+    "zona_impulso": "#B5EAD7", "area_ropa": "#FFDAB9",
 }
-
-def demo_data():
-    # Genera 33 tiendas T01..T33 con datos placeholder
-    ciudades = ["CDMX", "PUE", "GDL", "MTY", "QRO", "MEX"]
-    gerentes = ["Ana", "Luis", "Marta", "Paco", "Sofía", "Diego", "Lucía", "Carlos"]
-    filas = []
-    for i in range(1, 34):  # 1..33
-        tid = f"T{i:02d}"
-        filas.append({
-            "tienda_id": tid,
-            "nombre": f"Tienda {i:02d}",
-            "ciudad": ciudades[(i-1) % len(ciudades)],
-            "gerente": gerentes[(i-1) % len(gerentes)],
-            # Ejemplo: cada 7ma tienda "cerrada" solo para ver el filtro funcionar
-            "estatus": "abierta" if (i % 7) else "cerrada",
-        })
-    df_t = pd.DataFrame(filas)[TIENDAS_COLS]
-
-    # Capturas demo (solo algunas tiendas para que haya colores/scores distintos)
-    hoy = dt.date.today()
-    base = [
-        {"fecha":hoy,"tienda_id":"T01","notas":"Todo ok",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
-         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
-
-        {"fecha":hoy,"tienda_id":"T02","notas":"Faltan en zona impulso",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":False,"producto_rebaja_si":True,
-         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
-
-        {"fecha":hoy,"tienda_id":"T03","notas":"Requiere acomodo",
-         "pasarela_si":False,"acomodo_si":False,"producto_nuevo_si":False,"producto_rebaja_si":True,
-         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
-
-        {"fecha":hoy,"tienda_id":"T10","notas":"Bien vitrina",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":False,
-         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
-
-        {"fecha":hoy,"tienda_id":"T15","notas":"Reponer maniquí",
-         "pasarela_si":True,"acomodo_si":False,"producto_nuevo_si":True,"producto_rebaja_si":True,
-         "display_si":True,"maniquies_si":False,"zona_impulso_si":True,"area_ropa_si":True},
-
-        {"fecha":hoy,"tienda_id":"T22","notas":"Área ropa con huecos",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
-         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":False},
-    ]
-    df_c = pd.DataFrame(base)
-    return df_t, df_c
-
-df_t, df_c = demo_data()
 
 # ---------------- Utilidades ----------------
 def score_row(r):
@@ -115,7 +104,6 @@ def safe_index(vals, target, default=0):
         return default
 
 def rerun_compat():
-    # Compatibilidad con cualquier versión
     try:
         st.rerun()
     except Exception:
@@ -125,24 +113,25 @@ def rerun_compat():
             st.stop()
 
 def set_params_and_rerun(**kwargs):
-    # Actualiza query params y re-ejecuta de forma segura
+    """Prefiere la API nueva (st.query_params); fallback a experimental."""
+    # limpia claves con None
+    params = {k: v for k, v in kwargs.items() if v is not None}
     try:
-        # API vieja
-        st.experimental_set_query_params(**{k:[v] if isinstance(v, str) else v for k,v in kwargs.items()})
-    except Exception:
         # API nueva
         st.query_params.clear()
-        st.query_params.update(kwargs)
+        st.query_params.update(params)
+    except Exception:
+        # Fallback API vieja
+        st.experimental_set_query_params(**{k: v for k, v in params.items()})
     rerun_compat()
 
 def get_params():
-    # Lee params de forma compatible
+    """Lee query params preferentemente con la API nueva."""
     try:
-        qp = st.experimental_get_query_params()
-        # normaliza a str simple
-        return {k:(v[0] if isinstance(v, list) and v else v) for k,v in qp.items()}
-    except Exception:
         return dict(st.query_params)
+    except Exception:
+        qp = st.experimental_get_query_params()
+        return {k:(v[0] if isinstance(v, list) and v else v) for k,v in qp.items()}
 
 # ---------------- Routing por query params ----------------
 params = get_params()
@@ -168,12 +157,13 @@ choice = st.sidebar.radio("Secciones", [nav_labels[k] for k in keys_list], index
 for k, lbl in nav_labels.items():
     if lbl == choice and k != view:
         set_params_and_rerun(view=k, tienda=tienda_qp)
-        # no continúa por el rerun
 
 # Aplica filtros a tiendas
 df_t_filt = df_t.copy()
-if ciudad_sel != "Todas": df_t_filt = df_t_filt[df_t_filt["ciudad"] == ciudad_sel]
-if estatus_sel != "Todos": df_t_filt = df_t_filt[df_t_filt["estatus"] == estatus_sel]
+if ciudad_sel != "Todas":
+    df_t_filt = df_t_filt[df_t_filt["ciudad"] == ciudad_sel]
+if estatus_sel != "Todos":
+    df_t_filt = df_t_filt[df_t_filt["estatus"] == estatus_sel]
 
 # ==================== DASHBOARD ====================
 if view == "dashboard":
@@ -195,27 +185,26 @@ if view == "dashboard":
     c3.metric("Tiendas (filtro)", f"{len(df_t_filt)}")
 
     st.markdown("### 🛍️ Tiendas (clic para ir a Captura)")
-    grid_cols = 3
+    grid_cols = 6  # Para que quepan 33 en menos filas
     df_grid = df_t_filt.sort_values("tienda_id")
     blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
 
     for block in blocks:
         cols = st.columns(len(block))
         for j, (_, r) in enumerate(block.iterrows()):
-            row_hoy = df_hoy[df_hoy["tienda_id"] == r["tienda_id"]]
-            if row_hoy.empty:
+            # color/score seguro
+            try:
+                row_hoy = df_hoy[df_hoy["tienda_id"] == r["tienda_id"]]
+                if row_hoy.empty:
+                    raise ValueError("Sin datos")
+                color = str(row_hoy["color"].iloc[0])
+                sc = float(row_hoy["score_visual"].iloc[0]) * 100.0
+            except Exception:
                 color, sc = "#E5E5E5", 0.0
-            else:
-                try:
-                    color = row_hoy["color"].iloc[0]
-                    sc = float(row_hoy["score_visual"].iloc[0]) * 100.0
-                except Exception:
-                    color, sc = "#E5E5E5", 0.0
 
             with stylable_container(key=f"card_{r['tienda_id']}",
                                     css_styles=f"{{ background:{color}; border-radius:12px; padding:10px; border:1px solid #e8e8e8; }}"):
                 cols[j].markdown(f"**{r['tienda_id']} — {r['nombre']}**  \n<small>Score: {sc:,.0f}%</small>", unsafe_allow_html=True)
-                # Botón puro → setea params → rerun compat
                 if cols[j].button("Capturar aquí", key=f"btn_{r['tienda_id']}"):
                     set_params_and_rerun(view="captura", tienda=r["tienda_id"])
 
@@ -230,10 +219,7 @@ if view == "dashboard":
 elif view == "captura":
     st.subheader("📝 Captura diaria")
 
-    opciones = df_t_filt["tienda_id"].tolist()
-    if not opciones:
-        opciones = df_t["tienda_id"].tolist()
-
+    opciones = df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist()
     default_tienda = tienda_qp or (opciones[0] if opciones else None)
     idx = safe_index(opciones, default_tienda, default=0)
     idx = max(0, min(idx, max(len(opciones)-1, 0)))
@@ -281,7 +267,7 @@ elif view == "captura":
                 st.text_area("Notas", key=f"{key}_notas_demo")
                 st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
 
-    # Botón puro para volver, sin HTML
+    # Volver al dashboard (usa API nueva; fallback ya está en set_params_and_rerun)
     if hasattr(st, "link_button"):
         st.link_button("⬅️ Volver al Dashboard", url=f"?view=dashboard&tienda={tienda_id}")
     else:
