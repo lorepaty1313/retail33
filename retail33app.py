@@ -96,10 +96,12 @@ def color_from_score(score, has_data):
     if score >= 0.5: return "#FFF3B0"
     return "#FFB5A7"
 
-def go(view:str, tienda_id:str|None=None):
-    if tienda_id: st.session_state.tienda_sel = tienda_id
+def go(view, tienda_id=None):
+    if tienda_id is not None:
+        st.session_state.tienda_sel = tienda_id
     st.session_state.view = view
-    st.experimental_rerun()
+    # FIX: usar st.rerun() (no experimental)
+    st.rerun()
 
 # ------------------- UI -------------------
 st.title("🛍️ Retail 33 — Demo Visual")
@@ -113,7 +115,7 @@ estatus_sel = st.sidebar.selectbox("Estatus", ["Todos"] + sorted(df_t["estatus"]
 nav_labels = {"dashboard":"📊 Dashboard", "captura":"📝 Captura diaria", "tareas":"✅ Tareas", "config":"⚙️ Configuración"}
 choice = st.sidebar.radio("Secciones", [nav_labels[v] for v in nav_labels],
                           index=list(nav_labels.keys()).index(st.session_state.view))
-# Sincróniza estado si el usuario toca el radio
+# Sincroniza estado si el usuario toca el radio
 for k,v in nav_labels.items():
     if v == choice:
         st.session_state.view = k
@@ -157,11 +159,10 @@ if st.session_state.view == "dashboard":
                 sc = float(row_hoy["score_visual"].values[0]) * 100
 
             with stylable_container(key=f"card_{r['tienda_id']}",
-                                    css_styles=f"{{ background:{color}; }}"  # fondo por score
+                                    css_styles=f"{{ background:{color}; }}"
                                     ):
                 if cols[j].button(f"{r['tienda_id']} — {r['nombre']}\nScore: {sc:,.0f}%",
                                   key=f"btn_{r['tienda_id']}"):
-                    # Navega a Captura y preselecciona tienda
                     go("captura", r["tienda_id"])
 
 # ==================== VISTA: CAPTURA ====================
