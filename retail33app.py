@@ -4,6 +4,24 @@ import numpy as np
 import datetime as dt
 from streamlit_extras.stylable_container import stylable_container
 
+def go(view, tienda_id=None):
+    """
+    Navega actualizando parámetros de la URL y detiene el render actual
+    para evitar errores de 'primer clic'.
+    """
+    # Lee los params actuales
+    params = st.experimental_get_query_params()
+    # Setea la vista
+    params["view"] = [view]
+    # Setea tienda si aplica
+    if tienda_id is not None:
+        params["tienda"] = [tienda_id]
+    else:
+        params.pop("tienda", None)
+    # Actualiza URL y corta ejecución
+    st.experimental_set_query_params(**params)
+    st.stop()
+
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
 
@@ -178,17 +196,19 @@ if view == "dashboard":
 elif view == "captura":
     st.subheader("📝 Captura diaria")
 
-    opciones = df_t_filt["tienda_id"].tolist()
-    if not opciones:
-        opciones = df_t["tienda_id"].tolist()
-
-    default_tienda = tienda_qp or (opciones[0] if opciones else None)
+    opciones = df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist()
+    default_tienda = st.experimental_get_query_params().get("tienda", [None])[0] or (opciones[0] if opciones else None)
+    
+    def safe_index(vals, target, default=0):
+        try:
+            return next(i for i, v in enumerate(vals) if v == target)
+        except StopIteration:
+            return default
+        except Exception:
+            return default
+    
     idx = safe_index(opciones, default_tienda, default=0)
-    idx = max(0, min(idx, max(len(opciones)-1, 0)))
-
-    c1, c2 = st.columns(2)
-    _fecha = c1.date_input("Fecha", dt.date.today())
-    tienda_id = c2.selectbox("Tienda", opciones, index=idx)
+    tienda_id = st.selectbox("Tienda", opciones, index=idx if opciones else 0)
     st.caption(f"Tienda seleccionada: **{tienda_id}**")
 
     st.text_area("Notas generales")
