@@ -154,16 +154,15 @@ if view == "dashboard":
     for block in blocks:
         cols = st.columns(len(block))
         for j, (_, r) in enumerate(block.iterrows()):
+            # Calcula color y score de forma segura
+        try:
             row_hoy = df_hoy[df_hoy["tienda_id"] == r["tienda_id"]]
             if row_hoy.empty:
-                color, sc = "#E5E5E5", 0.0
-            else:
-                try:
-                    color = row_hoy["color"].iloc[0]
-                    sc = float(row_hoy["score_visual"].iloc[0]) * 100.0
-                except Exception:
-                    color, sc = "#E5E5E5", 0.0
-
+                raise ValueError("Sin datos")
+            color = str(row_hoy["color"].iloc[0]) if "color" in row_hoy else "#E5E5E5"
+            sc = float(row_hoy["score_visual"].iloc[0]) * 100.0 if "score_visual" in row_hoy else 0.0
+        except Exception:
+            color, sc = "#E5E5E5", 0.0
             with stylable_container(
                 key=f"card_{r['tienda_id']}",
                 css_styles="{ padding:0; }"
