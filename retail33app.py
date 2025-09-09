@@ -4,40 +4,19 @@ import numpy as np
 import datetime as dt
 from streamlit_extras.stylable_container import stylable_container
 
-def go(view, tienda_id=None):
-    """
-    Navega actualizando parámetros de la URL y detiene el render actual
-    para evitar errores de 'primer clic'.
-    """
-    # Lee los params actuales
-    params = st.experimental_get_query_params()
-    # Setea la vista
-    params["view"] = [view]
-    # Setea tienda si aplica
-    if tienda_id is not None:
-        params["tienda"] = [tienda_id]
-    else:
-        params.pop("tienda", None)
-    # Actualiza URL y corta ejecución
-    st.experimental_set_query_params(**params)
-    st.stop()
-
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
 
-# ---- CSS Global ----
+# ---- CSS Global (solo estilo visual; navegación con botones puros) ----
 st.markdown("""
 <style>
 body, .stApp { background:#ffffff !important; color:#4a4a4a !important; font-family:"Helvetica Neue", sans-serif; }
 h1, h2, h3, h4, h5, h6 { color:#4a4a4a !important; }
-.stTextInput, .stNumberInput, .stSelectbox, .stTextArea, .stDateInput { background:#ffffff !important; color:#4a4a4a !important; }
-label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
 .stButton>button { background:#f6bd60; color:#4a4a4a !important; border-radius:8px; border:none; font-weight:700; }
 .stButton>button:hover { background:#f28482; color:#fff !important; }
 [data-testid="stMetricValue"]{ color:#4a4a4a !important; font-weight:800; }
 [data-testid="stMetricLabel"]{ color:#6d6d6d !important; }
-a.card-link { text-decoration:none; color:inherit; }
-.store-card{ border-radius:12px; padding:10px; border:1px solid #e8e8e8; display:block; }
+.store-card{ border-radius:12px; padding:10px; border:1px solid #e8e8e8; }
 .store-card small{ display:block; font-weight:400; }
 </style>
 """, unsafe_allow_html=True)
@@ -111,10 +90,40 @@ def safe_index(vals, target, default=0):
     except Exception:
         return default
 
-# ---------------- Routing por query params (compat) ----------------
-params = st.experimental_get_query_params()  # funciona en versiones viejas
-view = (params.get("view", ["dashboard"])[0] or "dashboard")
-tienda_qp = params.get("tienda", [None])[0]
+def rerun_compat():
+    # Compatibilidad con cualquier versión
+    try:
+        st.rerun()
+    except Exception:
+        try:
+            st.experimental_rerun()
+        except Exception:
+            st.stop()
+
+def set_params_and_rerun(**kwargs):
+    # Actualiza query params y re-ejecuta de forma segura
+    try:
+        # API vieja
+        st.experimental_set_query_params(**{k:[v] if isinstance(v, str) else v for k,v in kwargs.items()})
+    except Exception:
+        # API nueva
+        st.query_params.clear()
+        st.query_params.update(kwargs)
+    rerun_compat()
+
+def get_params():
+    # Lee params de forma compatible
+    try:
+        qp = st.experimental_get_query_params()
+        # normaliza a str simple
+        return {k:(v[0] if isinstance(v, list) and v else v) for k,v in qp.items()}
+    except Exception:
+        return dict(st.query_params)
+
+# ---------------- Routing por query params ----------------
+params = get_params()
+view = params.get("view", "dashboard") or "dashboard"
+tienda_qp = params.get("tienda", None)
 
 st.title("🛍️ Retail 33 — Demo Visual")
 
@@ -123,13 +132,19 @@ st.sidebar.header("Filtros")
 ciudad_sel = st.sidebar.selectbox("Ciudad", ["Todas"] + sorted(df_t["ciudad"].unique()))
 estatus_sel = st.sidebar.selectbox("Estatus", ["Todos"] + sorted(df_t["estatus"].unique()))
 
-# “Tabs” manuales con enlaces
+# Navegación (radio) que escribe params y rerun
 nav_labels = {"dashboard":"📊 Dashboard", "captura":"📝 Captura diaria", "tareas":"✅ Tareas", "config":"⚙️ Configuración"}
-st.sidebar.markdown("#### Secciones")
-for key, label in nav_labels.items():
-    href = f"?view={key}" + (f"&tienda={tienda_qp}" if tienda_qp else "")
-    prefix = "➡️ " if key == view else " "
-    st.sidebar.markdown(f'{prefix}[{label}]({href})')
+keys_list = list(nav_labels.keys())
+try:
+    current_index = keys_list.index(view)
+except ValueError:
+    current_index = 0
+
+choice = st.sidebar.radio("Secciones", [nav_labels[k] for k in keys_list], index=current_index)
+for k, lbl in nav_labels.items():
+    if lbl == choice and k != view:
+        set_params_and_rerun(view=k, tienda=tienda_qp)
+        # no continúa por el rerun
 
 # Aplica filtros a tiendas
 df_t_filt = df_t.copy()
@@ -173,17 +188,12 @@ if view == "dashboard":
                 except Exception:
                     color, sc = "#E5E5E5", 0.0
 
-            # Botón → setea query params → stop (evita "primer clic falla")
-            with stylable_container(key=f"card_{r['tienda_id']}", css_styles="{ padding:0; }"):
-                cols[j].markdown(f"""
-                    <div class="store-card" style="background:{color}">
-                        <b>{r['tienda_id']} — {r['nombre']}</b>
-                        <small>Score: {sc:,.0f}%</small>
-                    </div>
-                """, unsafe_allow_html=True)
+            with stylable_container(key=f"card_{r['tienda_id']}",
+                                    css_styles=f"{{ background:{color}; border-radius:12px; padding:10px; border:1px solid #e8e8e8; }}"):
+                cols[j].markdown(f"**{r['tienda_id']} — {r['nombre']}**  \n<small>Score: {sc:,.0f}%</small>", unsafe_allow_html=True)
+                # Botón puro → setea params → rerun compat
                 if cols[j].button("Capturar aquí", key=f"btn_{r['tienda_id']}"):
-                    st.experimental_set_query_params(view="captura", tienda=r["tienda_id"])
-                    st.stop()  # <- CORTA el render inmediato y evita el crash del "primer clic"
+                    set_params_and_rerun(view="captura", tienda=r["tienda_id"])
 
     st.markdown("### 🔍 Detalle de hoy")
     st.dataframe(
@@ -196,19 +206,17 @@ if view == "dashboard":
 elif view == "captura":
     st.subheader("📝 Captura diaria")
 
-    opciones = df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist()
-    default_tienda = st.experimental_get_query_params().get("tienda", [None])[0] or (opciones[0] if opciones else None)
-    
-    def safe_index(vals, target, default=0):
-        try:
-            return next(i for i, v in enumerate(vals) if v == target)
-        except StopIteration:
-            return default
-        except Exception:
-            return default
-    
+    opciones = df_t_filt["tienda_id"].tolist()
+    if not opciones:
+        opciones = df_t["tienda_id"].tolist()
+
+    default_tienda = tienda_qp or (opciones[0] if opciones else None)
     idx = safe_index(opciones, default_tienda, default=0)
-    tienda_id = st.selectbox("Tienda", opciones, index=idx if opciones else 0)
+    idx = max(0, min(idx, max(len(opciones)-1, 0)))
+
+    c1, c2 = st.columns(2)
+    _fecha = c1.date_input("Fecha", dt.date.today())
+    tienda_id = c2.selectbox("Tienda", opciones, index=idx)
     st.caption(f"Tienda seleccionada: **{tienda_id}**")
 
     st.text_area("Notas generales")
@@ -249,7 +257,12 @@ elif view == "captura":
                 st.text_area("Notas", key=f"{key}_notas_demo")
                 st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
 
-    st.markdown(f"[⬅️ Volver al Dashboard](/?view=dashboard&tienda={tienda_id})")
+    # Botón puro para volver, sin HTML
+    if hasattr(st, "link_button"):
+        st.link_button("⬅️ Volver al Dashboard", url=f"?view=dashboard&tienda={tienda_id}")
+    else:
+        if st.button("⬅️ Volver al Dashboard"):
+            set_params_and_rerun(view="dashboard", tienda=tienda_id)
 
 # ==================== TAREAS / CONFIG ====================
 elif view == "tareas":
