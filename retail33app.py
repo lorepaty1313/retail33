@@ -26,44 +26,7 @@ label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
 """, unsafe_allow_html=True)
 
 # ---------- Datos demo / modelo ----------
-TIENDAS_COLS = ["tienda_id","nombre","ciudad","estatus"]
-
-# 33 tiendas con nombres placeholder (puedes reemplazar luego)
-def demo_data():
-    tiendas = []
-    ciudades = ["CDMX","PUE","GDL","MTY","QRO","MEX"]  # ejemplo
-    for i in range(1, 34):
-        tid = f"T{i:02d}"
-        tiendas.append({
-            "tienda_id": tid,
-            "nombre": f"Tienda {i:02d}",
-            "ciudad": ciudades[(i-1) % len(ciudades)],
-            "estatus": "abierta" if i % 7 != 0 else "cerrada"
-        })
-    df_t = pd.DataFrame(tiendas)[TIENDAS_COLS]
-
-    # Capturas demo para algunas tiendas (el resto quedará sin datos, y está manejado)
-    hoy = dt.date.today()
-    base = [
-        {"fecha":hoy,"tienda_id":"T01","notas":"Todo ok",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
-         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
-        {"fecha":hoy,"tienda_id":"T02","notas":"Faltan en zona impulso",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":False,"producto_rebaja_si":True,
-         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
-        {"fecha":hoy,"tienda_id":"T03","notas":"Requiere acomodo",
-         "pasarela_si":False,"acomodo_si":False,"producto_nuevo_si":False,"producto_rebaja_si":True,
-         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
-        {"fecha":hoy,"tienda_id":"T10","notas":"Bien vitrina",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":False,
-         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
-    ]
-    df_c = pd.DataFrame(base)
-    return df_t, df_c
-
-df_t, df_c = demo_data()
-
-# Categorías para la captura
+TIENDAS_COLS = ["tienda_id","nombre","ciudad","gerente","estatus"]
 CATEGORIAS = [
     ("pasarela",       "Pasarela de la moda"),
     ("acomodo",        "Acomodo guía visual"),
@@ -76,16 +39,42 @@ CATEGORIAS = [
 ]
 BOOL_COLS = [f"{k}_si" for k,_ in CATEGORIAS]
 
+# Paleta pastel por categoría (para el wrapper)
 PASTEL = {
-    "pasarela":        "#A7C7E7",
-    "acomodo":         "#C6E2B5",
-    "producto_nuevo":  "#F7C6C7",
-    "producto_rebaja": "#D9C2E9",
-    "display":         "#FFF3B0",
-    "maniquies":       "#FFB5A7",
-    "zona_impulso":    "#B5EAD7",
-    "area_ropa":       "#FFDAB9",
+    "pasarela":        "#A7C7E7",  # azul
+    "acomodo":         "#C6E2B5",  # verde
+    "producto_nuevo":  "#F7C6C7",  # rosa
+    "producto_rebaja": "#D9C2E9",  # lila
+    "display":         "#FFF3B0",  # amarillo
+    "maniquies":       "#FFB5A7",  # coral
+    "zona_impulso":    "#B5EAD7",  # menta
+    "area_ropa":       "#FFDAB9",  # durazno
 }
+
+def demo_data():
+    df_t = pd.DataFrame([
+        {"tienda_id":"T01","nombre":"Perisur","ciudad":"CDMX","gerente":"Ana","estatus":"abierta"},
+        {"tienda_id":"T02","nombre":"Santa Fe","ciudad":"CDMX","gerente":"Luis","estatus":"abierta"},
+        {"tienda_id":"T03","nombre":"Centro","ciudad":"CDMX","gerente":"Marta","estatus":"abierta"},
+        {"tienda_id":"T04","nombre":"Universidad","ciudad":"CDMX","gerente":"Paco","estatus":"abierta"},
+        {"tienda_id":"T05","nombre":"Puebla","ciudad":"PUE","gerente":"Sofía","estatus":"cerrada"},
+    ])[TIENDAS_COLS]
+    hoy = dt.date.today()
+    base = [
+        {"fecha":hoy,"tienda_id":"T01","notas":"Todo ok",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
+         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T02","notas":"Faltan en zona impulso",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":False,"producto_rebaja_si":True,
+         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
+        {"fecha":hoy,"tienda_id":"T03","notas":"Requiere acomodo",
+         "pasarela_si":False,"acomodo_si":False,"producto_nuevo_si":False,"producto_rebaja_si":True,
+         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
+    ]
+    df_c = pd.DataFrame(base)
+    return df_t, df_c
+
+df_t, df_c = demo_data()
 
 # ---------------- Utilidades ----------------
 def score_row(r):
@@ -106,8 +95,9 @@ def safe_index(vals, target, default=0):
     except Exception:
         return default
 
-# ---------------- Routing por query params (robusto) ----------------
-params = st.experimental_get_query_params()  # funciona en versiones viejas también
+# ---------------- Routing robusto por query params ----------------
+# (compatibles con versiones anteriores)
+params = st.experimental_get_query_params()
 view = params.get("view", ["dashboard"])[0]
 tienda_sel = params.get("tienda", [None])[0]
 
@@ -119,11 +109,12 @@ st.sidebar.header("Filtros")
 ciudad_sel = st.sidebar.selectbox("Ciudad", ["Todas"] + sorted(df_t["ciudad"].unique()))
 estatus_sel = st.sidebar.selectbox("Estatus", ["Todos"] + sorted(df_t["estatus"].unique()))
 
-# Navegación con botones (cada botón cambia params y corta render)
+# Navegación por botones (cada botón cambia params y corta el ciclo)
 st.sidebar.header("Secciones")
 if st.sidebar.button("📊 Dashboard"):
     st.experimental_set_query_params(view="dashboard", tienda=tienda_sel or "")
     st.stop()
+
 if st.sidebar.button("📝 Captura diaria"):
     if tienda_sel:
         st.experimental_set_query_params(view="captura", tienda=tienda_sel)
@@ -131,12 +122,10 @@ if st.sidebar.button("📝 Captura diaria"):
         st.experimental_set_query_params(view="captura")
     st.stop()
 
-# Aplica filtros
+# Aplica filtros a tiendas
 df_t_filt = df_t.copy()
-if ciudad_sel != "Todas":
-    df_t_filt = df_t_filt[df_t_filt["ciudad"] == ciudad_sel]
-if estatus_sel != "Todos":
-    df_t_filt = df_t_filt[df_t_filt["estatus"] == estatus_sel]
+if ciudad_sel != "Todas": df_t_filt = df_t_filt[df_t_filt["ciudad"] == ciudad_sel]
+if estatus_sel != "Todos": df_t_filt = df_t_filt[df_t_filt["estatus"] == estatus_sel]
 
 # ==================== DASHBOARD ====================
 if view == "dashboard":
@@ -158,22 +147,22 @@ if view == "dashboard":
     c3.metric("Tiendas (filtro)", f"{len(df_t_filt)}")
 
     st.markdown("### 🛍️ Tiendas (clic para ir a Captura)")
-    grid_cols = 6  # 6 x 6 ≈ 36, cabe bien 33
+    grid_cols = 3
     df_grid = df_t_filt.sort_values("tienda_id")
     blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
 
     for block in blocks:
         cols = st.columns(len(block))
         for j, (_, r) in enumerate(block.iterrows()):
-            # Color/score seguro
-            try:
-                row_hoy = df_hoy[df_hoy["tienda_id"] == r["tienda_id"]]
-                if row_hoy.empty:
-                    raise ValueError("Sin datos")
-                color = str(row_hoy["color"].iloc[0])
-                sc = float(row_hoy["score_visual"].iloc[0]) * 100.0
-            except Exception:
+            row_hoy = df_hoy[df_hoy["tienda_id"] == r["tienda_id"]]
+            if row_hoy.empty:
                 color, sc = "#E5E5E5", 0.0
+            else:
+                try:
+                    color = row_hoy["color"].iloc[0]
+                    sc = float(row_hoy["score_visual"].iloc[0]) * 100.0
+                except Exception:
+                    color, sc = "#E5E5E5", 0.0
 
             with stylable_container(
                 key=f"card_{r['tienda_id']}",
@@ -186,6 +175,7 @@ if view == "dashboard":
                     </div>""",
                     unsafe_allow_html=True
                 )
+                # Botón: setea params y corta ejecución (evita error del primer clic)
                 if cols[j].button("Capturar aquí", key=f"btn_{r['tienda_id']}"):
                     st.experimental_set_query_params(view="captura", tienda=r["tienda_id"])
                     st.stop()
@@ -250,12 +240,12 @@ elif view == "captura":
                 st.text_area("Notas", key=f"{key}_notas_demo")
                 st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
 
-    # Volver al dashboard (funciona y corta el ciclo)
+    # Volver al dashboard (manteniendo tienda en la URL si quieres)
     if st.button("⬅️ Volver al Dashboard"):
         st.experimental_set_query_params(view="dashboard", tienda=tienda_id)
         st.stop()
 
-# ==================== Otras vistas (placeholders) ====================
+# ==================== TAREAS / CONFIG ====================
 elif view == "tareas":
     st.subheader("✅ Gestión de tareas (demo)")
     st.write("Aquí irán las tareas (no implementado en demo).")
