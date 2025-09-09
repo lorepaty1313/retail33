@@ -19,10 +19,7 @@ label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
 [data-testid="stMetricValue"]{ color:#4a4a4a !important; font-weight:800; }
 [data-testid="stMetricLabel"]{ color:#6d6d6d !important; }
 a.card-link { text-decoration:none; color:inherit; }
-.store-card{
-  border-radius:12px; padding:10px; border:1px solid #e8e8e8;
-  display:block;
-}
+.store-card{ border-radius:12px; padding:10px; border:1px solid #e8e8e8; display:block; }
 .store-card small{ display:block; font-weight:400; }
 </style>
 """, unsafe_allow_html=True)
@@ -88,8 +85,16 @@ def color_from_score(score, has_data):
     if score >= 0.5: return "#FFF3B0"
     return "#FFB5A7"
 
-# ---------------- Routing simple por query params (compat) ----------------
-params = st.experimental_get_query_params()  # siempre disponible
+def safe_index(vals, target, default=0):
+    try:
+        return next(i for i, v in enumerate(vals) if v == target)
+    except StopIteration:
+        return default
+    except Exception:
+        return default
+
+# ---------------- Routing por query params (compat) ----------------
+params = st.experimental_get_query_params()  # funciona en versiones viejas
 view = (params.get("view", ["dashboard"])[0] or "dashboard")
 tienda_qp = params.get("tienda", [None])[0]
 
@@ -100,11 +105,10 @@ st.sidebar.header("Filtros")
 ciudad_sel = st.sidebar.selectbox("Ciudad", ["Todas"] + sorted(df_t["ciudad"].unique()))
 estatus_sel = st.sidebar.selectbox("Estatus", ["Todos"] + sorted(df_t["estatus"].unique()))
 
-# “Tabs” manuales con enlaces (evita cambiar estado por código)
+# “Tabs” manuales con enlaces
 nav_labels = {"dashboard":"📊 Dashboard", "captura":"📝 Captura diaria", "tareas":"✅ Tareas", "config":"⚙️ Configuración"}
 st.sidebar.markdown("#### Secciones")
 for key, label in nav_labels.items():
-    # Mantén tienda en el link si existe
     href = f"?view={key}" + (f"&tienda={tienda_qp}" if tienda_qp else "")
     prefix = "➡️ " if key == view else " "
     st.sidebar.markdown(f'{prefix}[{label}]({href})')
@@ -133,7 +137,7 @@ if view == "dashboard":
     c2.metric("Score promedio", f"{score_prom:,.1f}%")
     c3.metric("Tiendas (filtro)", f"{len(df_t_filt)}")
 
-    st.markdown("### 🛍️ Tiendas (clic te lleva a Captura de esa tienda)")
+    st.markdown("### 🛍️ Tiendas (clic para ir a Captura)")
     grid_cols = 3
     df_grid = df_t_filt.sort_values("tienda_id")
     blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
@@ -145,25 +149,23 @@ if view == "dashboard":
             if row_hoy.empty:
                 color, sc = "#E5E5E5", 0.0
             else:
-                # Usa iloc/at con try/except por seguridad
                 try:
                     color = row_hoy["color"].iloc[0]
                     sc = float(row_hoy["score_visual"].iloc[0]) * 100.0
                 except Exception:
                     color, sc = "#E5E5E5", 0.0
 
-            # Enlace HTML directo (sin session_state ni rerun manual)
-            href = f"?view=captura&tienda={r['tienda_id']}"
-            card_html = f"""
-                <a class="card-link" href="{href}">
+            # Botón → setea query params → stop (evita "primer clic falla")
+            with stylable_container(key=f"card_{r['tienda_id']}", css_styles="{ padding:0; }"):
+                cols[j].markdown(f"""
                     <div class="store-card" style="background:{color}">
-                        {r['tienda_id']} — {r['nombre']}
+                        <b>{r['tienda_id']} — {r['nombre']}</b>
                         <small>Score: {sc:,.0f}%</small>
                     </div>
-                </a>
-            """
-            with stylable_container(key=f"card_{r['tienda_id']}", css_styles="{ padding:0; }"):
-                cols[j].markdown(card_html, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+                if cols[j].button("Capturar aquí", key=f"btn_{r['tienda_id']}"):
+                    st.experimental_set_query_params(view="captura", tienda=r["tienda_id"])
+                    st.stop()  # <- CORTA el render inmediato y evita el crash del "primer clic"
 
     st.markdown("### 🔍 Detalle de hoy")
     st.dataframe(
@@ -176,26 +178,16 @@ if view == "dashboard":
 elif view == "captura":
     st.subheader("📝 Captura diaria")
 
-    # Determina tienda por query param (si no, el primer id filtrado)
     opciones = df_t_filt["tienda_id"].tolist()
     if not opciones:
-        # Fallback: sin coincidencias por filtros, usa todas
         opciones = df_t["tienda_id"].tolist()
-    
+
     default_tienda = tienda_qp or (opciones[0] if opciones else None)
-    
-    def safe_index(vals, target, default=0):
-        try:
-            return next(i for i, v in enumerate(vals) if v == target)
-        except StopIteration:
-            return default
-        except Exception:
-            return default
-    
     idx = safe_index(opciones, default_tienda, default=0)
-    # clamp por si hubiera cambios de última hora
     idx = max(0, min(idx, max(len(opciones)-1, 0)))
-    
+
+    c1, c2 = st.columns(2)
+    _fecha = c1.date_input("Fecha", dt.date.today())
     tienda_id = c2.selectbox("Tienda", opciones, index=idx)
     st.caption(f"Tienda seleccionada: **{tienda_id}**")
 
@@ -237,7 +229,6 @@ elif view == "captura":
                 st.text_area("Notas", key=f"{key}_notas_demo")
                 st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
 
-    # Link para volver al dashboard, conservando tienda en URL
     st.markdown(f"[⬅️ Volver al Dashboard](/?view=dashboard&tienda={tienda_id})")
 
 # ==================== TAREAS / CONFIG ====================
