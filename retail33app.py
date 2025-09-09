@@ -47,24 +47,48 @@ PASTEL = {
 }
 
 def demo_data():
-    df_t = pd.DataFrame([
-        {"tienda_id":"T01","nombre":"Perisur","ciudad":"CDMX","gerente":"Ana","estatus":"abierta"},
-        {"tienda_id":"T02","nombre":"Santa Fe","ciudad":"CDMX","gerente":"Luis","estatus":"abierta"},
-        {"tienda_id":"T03","nombre":"Centro","ciudad":"CDMX","gerente":"Marta","estatus":"abierta"},
-        {"tienda_id":"T04","nombre":"Universidad","ciudad":"CDMX","gerente":"Paco","estatus":"abierta"},
-        {"tienda_id":"T05","nombre":"Puebla","ciudad":"PUE","gerente":"Sofía","estatus":"cerrada"},
-    ])[TIENDAS_COLS]
+    # Genera 33 tiendas T01..T33 con datos placeholder
+    ciudades = ["CDMX", "PUE", "GDL", "MTY", "QRO", "MEX"]
+    gerentes = ["Ana", "Luis", "Marta", "Paco", "Sofía", "Diego", "Lucía", "Carlos"]
+    filas = []
+    for i in range(1, 34):  # 1..33
+        tid = f"T{i:02d}"
+        filas.append({
+            "tienda_id": tid,
+            "nombre": f"Tienda {i:02d}",
+            "ciudad": ciudades[(i-1) % len(ciudades)],
+            "gerente": gerentes[(i-1) % len(gerentes)],
+            # Ejemplo: cada 7ma tienda "cerrada" solo para ver el filtro funcionar
+            "estatus": "abierta" if (i % 7) else "cerrada",
+        })
+    df_t = pd.DataFrame(filas)[TIENDAS_COLS]
+
+    # Capturas demo (solo algunas tiendas para que haya colores/scores distintos)
     hoy = dt.date.today()
     base = [
         {"fecha":hoy,"tienda_id":"T01","notas":"Todo ok",
          "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
          "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
+
         {"fecha":hoy,"tienda_id":"T02","notas":"Faltan en zona impulso",
          "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":False,"producto_rebaja_si":True,
          "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
+
         {"fecha":hoy,"tienda_id":"T03","notas":"Requiere acomodo",
          "pasarela_si":False,"acomodo_si":False,"producto_nuevo_si":False,"producto_rebaja_si":True,
          "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
+
+        {"fecha":hoy,"tienda_id":"T10","notas":"Bien vitrina",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":False,
+         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
+
+        {"fecha":hoy,"tienda_id":"T15","notas":"Reponer maniquí",
+         "pasarela_si":True,"acomodo_si":False,"producto_nuevo_si":True,"producto_rebaja_si":True,
+         "display_si":True,"maniquies_si":False,"zona_impulso_si":True,"area_ropa_si":True},
+
+        {"fecha":hoy,"tienda_id":"T22","notas":"Área ropa con huecos",
+         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
+         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":False},
     ]
     df_c = pd.DataFrame(base)
     return df_t, df_c
