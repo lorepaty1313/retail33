@@ -18,8 +18,6 @@ label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
 .stButton>button:hover { background:#f28482; color:#fff !important; }
 [data-testid="stMetricValue"]{ color:#4a4a4a !important; font-weight:800; }
 [data-testid="stMetricLabel"]{ color:#6d6d6d !important; }
-.dataframe, .stDataFrame, .stTable { background:#ffffff !important; color:#4a4a4a !important; }
-.stDataFrame div { color:#4a4a4a !important; }
 .store-card{ border-radius:12px; padding:10px; border:1px solid #e8e8e8; }
 .store-card button[kind="secondary"]{
   width:100%; background:transparent; border:none; text-align:left; color:#444;
@@ -78,11 +76,23 @@ def demo_data():
 
 df_t, df_c = demo_data()
 
-# ---------------- Estado / helpers ----------------
+# ---------------- Estado / routing por query params ----------------
+# Lee vista y tienda desde la URL (ej. ?view=captura&tienda=T03)
+qp = st.query_params
+view_from_qp = qp.get("view", "dashboard")
+tienda_from_qp = qp.get("tienda", None)
+
+# Fallbacks en session_state (opcional, por si quieres conservar al regresar)
 if "view" not in st.session_state:
-    st.session_state["view"] = "dashboard"   # "dashboard" | "captura" | "tareas" | "config"
+    st.session_state["view"] = view_from_qp
 if "tienda_sel" not in st.session_state:
-    st.session_state["tienda_sel"] = None
+    st.session_state["tienda_sel"] = tienda_from_qp
+
+# Si cambian los query params externamente, sincroniza
+if st.session_state["view"] != view_from_qp:
+    st.session_state["view"] = view_from_qp
+if tienda_from_qp and st.session_state["tienda_sel"] != tienda_from_qp:
+    st.session_state["tienda_sel"] = tienda_from_qp
 
 def score_row(r):
     vals = [(1.0 if bool(r.get(col)) else 0.0) for col in BOOL_COLS]
@@ -94,11 +104,16 @@ def color_from_score(score, has_data):
     if score >= 0.5: return "#FFF3B0"
     return "#FFB5A7"
 
-def go(view, tienda_id=None):
-    if tienda_id is not None:
-        st.session_state["tienda_sel"] = tienda_id
-    st.session_state["view"] = view
-    st.rerun()
+def navigate_to(view, tienda_id=None):
+    """Navega actualizando query params (dispara rerun automáticamente)."""
+    params = dict(st.query_params)
+    params["view"] = view
+    if tienda_id:
+        params["tienda"] = tienda_id
+    else:
+        params.pop("tienda", None)
+    st.query_params.clear()
+    st.query_params.update(params)
 
 # ------------------- UI -------------------
 st.title("🛍️ Retail 33 — Demo Visual")
@@ -108,18 +123,18 @@ st.sidebar.header("Filtros")
 ciudad_sel = st.sidebar.selectbox("Ciudad", ["Todas"] + sorted(df_t["ciudad"].unique()))
 estatus_sel = st.sidebar.selectbox("Estatus", ["Todos"] + sorted(df_t["estatus"].unique()))
 
-# Navegación (controlable por código)
+# Navegación (radio) reflejando la vista actual
 nav_labels = {"dashboard":"📊 Dashboard", "captura":"📝 Captura diaria", "tareas":"✅ Tareas", "config":"⚙️ Configuración"}
-label_list = [nav_labels[k] for k in nav_labels]
+keys_list = list(nav_labels.keys())
 try:
-    current_index = list(nav_labels.keys()).index(st.session_state.get("view", "dashboard"))
+    current_index = keys_list.index(st.session_state["view"])
 except ValueError:
     current_index = 0
-choice = st.sidebar.radio("Secciones", label_list, index=current_index)
-# Sincroniza si el usuario toca el radio
-for k,v in nav_labels.items():
-    if v == choice:
-        st.session_state["view"] = k
+choice = st.sidebar.radio("Secciones", [nav_labels[k] for k in keys_list], index=current_index)
+# Si el usuario cambia por sidebar, navega por query params
+for k, lbl in nav_labels.items():
+    if lbl == choice and k != st.session_state["view"]:
+        navigate_to(k, st.session_state.get("tienda_sel"))
         break
 
 # Aplica filtros
@@ -140,7 +155,7 @@ if st.session_state["view"] == "dashboard":
     df_hoy["color"] = [color_from_score(s, d) for s, d in zip(df_hoy["score_visual"], has_data)]
 
     c1, c2, c3 = st.columns(3)
-    c1.metric("Visita (hoy)", f"{(has_data.sum()/max(len(df_hoy),1))*100:,.0f}%")
+    c1.metric("Visita (hoy)", f"{(has_data.sum()/max(len[df_hoy],1))*100:,.0f}%")
     c2.metric("Score promedio", f"{float(df_hoy['score_visual'].mean())*100:,.1f}%")
     c3.metric("Tiendas (filtro)", f"{len(df_t_filt)}")
 
@@ -157,14 +172,13 @@ if st.session_state["view"] == "dashboard":
                 color, sc = "#E5E5E5", 0
             else:
                 color = row_hoy["color"].values[0]
-                sc = float(row_hoy["score_visual"].values[0]) * 100
+                sc = float(df_hoy.loc[row_hoy.index[0], "score_visual"]) * 100
 
             with stylable_container(key=f"card_{r['tienda_id']}",
-                                    css_styles=f"{{ background:{color}; }}"
-                                    ):
+                                    css_styles=f"{{ background:{color}; }}"):
                 if cols[j].button(f"{r['tienda_id']} — {r['nombre']}\nScore: {sc:,.0f}%",
                                   key=f"btn_{r['tienda_id']}"):
-                    go("captura", r["tienda_id"])
+                    navigate_to("captura", r["tienda_id"])
 
 # ==================== CAPTURA ====================
 elif st.session_state["view"] == "captura":
@@ -172,13 +186,15 @@ elif st.session_state["view"] == "captura":
     c1, c2 = st.columns(2)
     fecha = c1.date_input("Fecha", dt.date.today())
     opciones = df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist()
-    default_tienda = st.session_state.get("tienda_sel") or (opciones[0] if opciones else None)
+
+    # Toma tienda de query params / session state
+    default_tienda = st.query_params.get("tienda", st.session_state.get("tienda_sel") or (opciones[0] if opciones else None))
     try:
         idx = opciones.index(default_tienda) if default_tienda in opciones else 0
     except ValueError:
         idx = 0
     tienda_id = c2.selectbox("Tienda", opciones, index=idx)
-    st.session_state["tienda_sel"] = tienda_id
+    st.session_state["tienda_sel"] = tienda_id  # sync
 
     st.text_area("Notas generales")
 
@@ -218,14 +234,13 @@ elif st.session_state["view"] == "captura":
                 st.text_area("Notas", key=f"{key}_notas_demo")
                 st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
 
-    st.button("⬅️ Volver al Dashboard", on_click=lambda: go("dashboard"))
+    st.button("⬅️ Volver al Dashboard", on_click=lambda: navigate_to("dashboard"))
 
-# ==================== TAREAS ====================
+# ==================== TAREAS / CONFIG ====================
 elif st.session_state["view"] == "tareas":
     st.subheader("✅ Gestión de tareas (demo)")
     st.write("Aquí irán las tareas (no implementado en demo).")
 
-# ==================== CONFIGURACIÓN ====================
 elif st.session_state["view"] == "config":
     st.subheader("⚙️ Tiendas (demo)")
     st.dataframe(df_t, use_container_width=True)
