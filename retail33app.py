@@ -7,7 +7,7 @@ from streamlit_extras.stylable_container import stylable_container
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
 
-# ---- CSS Global: fondo blanco + texto gris ----
+# ---- CSS Global ----
 st.markdown("""
 <style>
 body, .stApp { background:#ffffff !important; color:#4a4a4a !important; font-family:"Helvetica Neue", sans-serif; }
@@ -20,8 +20,6 @@ label, .stMarkdown, .stCaption { color:#4a4a4a !important; }
 [data-testid="stMetricLabel"]{ color:#6d6d6d !important; }
 .dataframe, .stDataFrame, .stTable { background:#ffffff !important; color:#4a4a4a !important; }
 .stDataFrame div { color:#4a4a4a !important; }
-
-/* Tarjeta */
 .store-card{ border-radius:12px; padding:10px; border:1px solid #e8e8e8; }
 .store-card button[kind="secondary"]{
   width:100%; background:transparent; border:none; text-align:left; color:#444;
@@ -80,11 +78,11 @@ def demo_data():
 
 df_t, df_c = demo_data()
 
-# ---------------- Estado y helpers de navegación ----------------
+# ---------------- Estado / helpers ----------------
 if "view" not in st.session_state:
-    st.session_state.view = "dashboard"   # "dashboard" | "captura" | "tareas" | "config"
+    st.session_state["view"] = "dashboard"   # "dashboard" | "captura" | "tareas" | "config"
 if "tienda_sel" not in st.session_state:
-    st.session_state.tienda_sel = None
+    st.session_state["tienda_sel"] = None
 
 def score_row(r):
     vals = [(1.0 if bool(r.get(col)) else 0.0) for col in BOOL_COLS]
@@ -98,9 +96,8 @@ def color_from_score(score, has_data):
 
 def go(view, tienda_id=None):
     if tienda_id is not None:
-        st.session_state.tienda_sel = tienda_id
-    st.session_state.view = view
-    # FIX: usar st.rerun() (no experimental)
+        st.session_state["tienda_sel"] = tienda_id
+    st.session_state["view"] = view
     st.rerun()
 
 # ------------------- UI -------------------
@@ -113,12 +110,16 @@ estatus_sel = st.sidebar.selectbox("Estatus", ["Todos"] + sorted(df_t["estatus"]
 
 # Navegación (controlable por código)
 nav_labels = {"dashboard":"📊 Dashboard", "captura":"📝 Captura diaria", "tareas":"✅ Tareas", "config":"⚙️ Configuración"}
-choice = st.sidebar.radio("Secciones", [nav_labels[v] for v in nav_labels],
-                          index=list(nav_labels.keys()).index(st.session_state.view))
-# Sincroniza estado si el usuario toca el radio
+label_list = [nav_labels[k] for k in nav_labels]
+try:
+    current_index = list(nav_labels.keys()).index(st.session_state.get("view", "dashboard"))
+except ValueError:
+    current_index = 0
+choice = st.sidebar.radio("Secciones", label_list, index=current_index)
+# Sincroniza si el usuario toca el radio
 for k,v in nav_labels.items():
     if v == choice:
-        st.session_state.view = k
+        st.session_state["view"] = k
         break
 
 # Aplica filtros
@@ -126,8 +127,8 @@ df_t_filt = df_t.copy()
 if ciudad_sel != "Todas": df_t_filt = df_t_filt[df_t_filt["ciudad"] == ciudad_sel]
 if estatus_sel != "Todos": df_t_filt = df_t_filt[df_t_filt["estatus"] == estatus_sel]
 
-# ==================== VISTA: DASHBOARD ====================
-if st.session_state.view == "dashboard":
+# ==================== DASHBOARD ====================
+if st.session_state["view"] == "dashboard":
     st.subheader("Resumen visual (hoy)")
     hoy = dt.date.today()
 
@@ -165,16 +166,19 @@ if st.session_state.view == "dashboard":
                                   key=f"btn_{r['tienda_id']}"):
                     go("captura", r["tienda_id"])
 
-# ==================== VISTA: CAPTURA ====================
-elif st.session_state.view == "captura":
+# ==================== CAPTURA ====================
+elif st.session_state["view"] == "captura":
     st.subheader("📝 Captura diaria")
     c1, c2 = st.columns(2)
     fecha = c1.date_input("Fecha", dt.date.today())
     opciones = df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist()
-    default_tienda = st.session_state.tienda_sel or (opciones[0] if opciones else None)
-    idx = opciones.index(default_tienda) if (default_tienda in opciones) else 0
+    default_tienda = st.session_state.get("tienda_sel") or (opciones[0] if opciones else None)
+    try:
+        idx = opciones.index(default_tienda) if default_tienda in opciones else 0
+    except ValueError:
+        idx = 0
     tienda_id = c2.selectbox("Tienda", opciones, index=idx)
-    st.session_state.tienda_sel = tienda_id
+    st.session_state["tienda_sel"] = tienda_id
 
     st.text_area("Notas generales")
 
@@ -216,12 +220,12 @@ elif st.session_state.view == "captura":
 
     st.button("⬅️ Volver al Dashboard", on_click=lambda: go("dashboard"))
 
-# ==================== VISTA: TAREAS ====================
-elif st.session_state.view == "tareas":
+# ==================== TAREAS ====================
+elif st.session_state["view"] == "tareas":
     st.subheader("✅ Gestión de tareas (demo)")
     st.write("Aquí irán las tareas (no implementado en demo).")
 
-# ==================== VISTA: CONFIGURACIÓN ====================
-elif st.session_state.view == "config":
+# ==================== CONFIGURACIÓN ====================
+elif st.session_state["view"] == "config":
     st.subheader("⚙️ Tiendas (demo)")
     st.dataframe(df_t, use_container_width=True)
