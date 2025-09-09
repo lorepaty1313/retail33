@@ -143,10 +143,14 @@ if view == "dashboard":
         for j, (_, r) in enumerate(block.iterrows()):
             row_hoy = df_hoy[df_hoy["tienda_id"] == r["tienda_id"]]
             if row_hoy.empty:
-                color, sc = "#E5E5E5", 0
+                color, sc = "#E5E5E5", 0.0
             else:
-                color = row_hoy["color"].values[0]
-                sc = float(row_hoy["score_visual"].values[0]) * 100
+                # Usa iloc/at con try/except por seguridad
+                try:
+                    color = row_hoy["color"].iloc[0]
+                    sc = float(row_hoy["score_visual"].iloc[0]) * 100.0
+                except Exception:
+                    color, sc = "#E5E5E5", 0.0
 
             # Enlace HTML directo (sin session_state ni rerun manual)
             href = f"?view=captura&tienda={r['tienda_id']}"
@@ -173,15 +177,25 @@ elif view == "captura":
     st.subheader("📝 Captura diaria")
 
     # Determina tienda por query param (si no, el primer id filtrado)
-    opciones = df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist()
+    opciones = df_t_filt["tienda_id"].tolist()
+    if not opciones:
+        # Fallback: sin coincidencias por filtros, usa todas
+        opciones = df_t["tienda_id"].tolist()
+    
     default_tienda = tienda_qp or (opciones[0] if opciones else None)
-    try:
-        idx = opciones.index(default_tienda) if default_tienda in opciones else 0
-    except ValueError:
-        idx = 0
-
-    c1, c2 = st.columns(2)
-    fecha = c1.date_input("Fecha", dt.date.today())
+    
+    def safe_index(vals, target, default=0):
+        try:
+            return next(i for i, v in enumerate(vals) if v == target)
+        except StopIteration:
+            return default
+        except Exception:
+            return default
+    
+    idx = safe_index(opciones, default_tienda, default=0)
+    # clamp por si hubiera cambios de última hora
+    idx = max(0, min(idx, max(len(opciones)-1, 0)))
+    
     tienda_id = c2.selectbox("Tienda", opciones, index=idx)
     st.caption(f"Tienda seleccionada: **{tienda_id}**")
 
