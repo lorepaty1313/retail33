@@ -1,284 +1,299 @@
+# app.py
 import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime as dt
+import io
+from datetime import datetime
+from supabase import create_client
 from streamlit_extras.stylable_container import stylable_container
 
 # ---------------- CONFIG ----------------
-st.set_page_config(page_title="Retail 33 - Demo Visual", page_icon="🛍️", layout="wide")
+st.set_page_config(page_title="Retail 33", page_icon="🛍️", layout="wide")
 
-# ---- CSS ----
+# ---- CSS simple (fondo blanco + texto gris) ----
 st.markdown("""
 <style>
 body, .stApp { background:#ffffff !important; color:#4a4a4a !important; font-family:"Helvetica Neue", sans-serif; }
 h1, h2, h3, h4, h5, h6 { color:#4a4a4a !important; }
 .stButton>button { background:#f6bd60; color:#4a4a4a !important; border-radius:8px; border:none; font-weight:700; }
 .stButton>button:hover { background:#f28482; color:#fff !important; }
-[data-testid="stMetricValue"]{ color:#4a4a4a !important; font-weight:800; }
-[data-testid="stMetricLabel"]{ color:#6d6d6d !important; }
-.store-card{ border-radius:12px; padding:10px; border:1px solid #e8e8e8; }
-.store-card small{ display:block; font-weight:400; }
+.store{ border-radius:10px; padding:12px; font-weight:700; text-align:center; color:#444; }
+.store small{ display:block; font-weight:400; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- Datos demo / modelo ----------
-TIENDAS_COLS = ["tienda_id","nombre","ciudad","gerente","estatus"]
+# ---------- Supabase ----------
+@st.cache_resource
+def get_sb():
+    return create_client(st.secrets["supabase"]["url"], st.secrets["supabase"]["anon_key"])
+sb = get_sb()
 
-# 33 tiendas (T01..T33)
-def demo_data():
-    ciudades = ["CDMX","PUE","GDL","MTY","QRO","MEX"]
-    gerentes = ["Ana","Luis","Marta","Paco","Sofía","Diego","Lucía","Carlos"]
-    rows = []
-    for i in range(1, 34):
-        tid = f"T{i:02d}"
-        rows.append({
-            "tienda_id": tid,
-            "nombre": f"Tienda {i:02d}",
-            "ciudad": ciudades[(i-1) % len(ciudades)],
-            "gerente": gerentes[(i-1) % len(gerentes)],
-            "estatus": "abierta" if (i % 7) else "cerrada"
-        })
-    df_t = pd.DataFrame(rows)[TIENDAS_COLS]
+def login_ui():
+    st.subheader("Acceso")
+    email = st.text_input("Email")
+    pwd = st.text_input("Contraseña", type="password")
+    if st.button("Entrar"):
+        try:
+            res = sb.auth.sign_in_with_password({"email": email, "password": pwd})
+            st.session_state.user = res.user
+            st.rerun()
+        except Exception as e:
+            st.error(f"No pude iniciar sesión: {e}")
 
-    hoy = dt.date.today()
-    base = [
-        {"fecha":hoy,"tienda_id":"T01","notas":"Todo ok",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
-         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
-        {"fecha":hoy,"tienda_id":"T02","notas":"Faltan en zona impulso",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":False,"producto_rebaja_si":True,
-         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
-        {"fecha":hoy,"tienda_id":"T03","notas":"Requiere acomodo",
-         "pasarela_si":False,"acomodo_si":False,"producto_nuevo_si":False,"producto_rebaja_si":True,
-         "display_si":False,"maniquies_si":True,"zona_impulso_si":False,"area_ropa_si":True},
-        {"fecha":hoy,"tienda_id":"T10","notas":"Bien vitrina",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":False,
-         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":True},
-        {"fecha":hoy,"tienda_id":"T15","notas":"Reponer maniquí",
-         "pasarela_si":True,"acomodo_si":False,"producto_nuevo_si":True,"producto_rebaja_si":True,
-         "display_si":True,"maniquies_si":False,"zona_impulso_si":True,"area_ropa_si":True},
-        {"fecha":hoy,"tienda_id":"T22","notas":"Área ropa con huecos",
-         "pasarela_si":True,"acomodo_si":True,"producto_nuevo_si":True,"producto_rebaja_si":True,
-         "display_si":True,"maniquies_si":True,"zona_impulso_si":True,"area_ropa_si":False},
-    ]
-    df_c = pd.DataFrame(base)
-    return df_t, df_c
+def load_profile():
+    uid = st.session_state.user.id
+    data = sb.table("users_profile").select("*").eq("id", uid).single().execute()
+    st.session_state.profile = data.data
+    return data.data
 
-df_t, df_c = demo_data()
+def require_login():
+    if "user" not in st.session_state:
+        login_ui()
+        st.stop()
 
-# Categorías y colores
+def role_and_store():
+    prof = st.session_state.get("profile") or load_profile()
+    role = prof["role"]
+    store_code = prof.get("store_code")
+    return role, store_code
+
+# ---------- Constantes ----------
 CATEGORIAS = [
-    ("pasarela",       "Pasarela de la moda"),
-    ("acomodo",        "Acomodo guía visual"),
-    ("producto_nuevo", "Producto nuevo"),
+    ("pasarela","Pasarela de la moda"),
+    ("acomodo","Acomodo guía visual"),
+    ("producto_nuevo","Producto nuevo"),
     ("producto_rebaja","Producto rebaja"),
-    ("display",        "Display"),
-    ("maniquies",      "Maniquíes"),
-    ("zona_impulso",   "Zona impulso"),
-    ("area_ropa",      "Área ropa"),
+    ("display","Display"),
+    ("maniquies","Maniquíes"),
+    ("zona_impulso","Zona impulso"),
+    ("area_ropa","Área ropa"),
 ]
 BOOL_COLS = [f"{k}_si" for k,_ in CATEGORIAS]
+
 PASTEL = {
-    "pasarela": "#A7C7E7", "acomodo": "#C6E2B5", "producto_nuevo": "#F7C6C7",
-    "producto_rebaja": "#D9C2E9", "display": "#FFF3B0", "maniquies": "#FFB5A7",
-    "zona_impulso": "#B5EAD7", "area_ropa": "#FFDAB9",
+    "pasarela":        "#A7C7E7",  "acomodo":         "#C6E2B5",
+    "producto_nuevo":  "#F7C6C7",  "producto_rebaja": "#D9C2E9",
+    "display":         "#FFF3B0",  "maniquies":       "#FFB5A7",
+    "zona_impulso":    "#B5EAD7",  "area_ropa":       "#FFDAB9",
 }
 
-# ---------------- Utilidades ----------------
-def score_row(r):
-    vals = [(1.0 if bool(r.get(col)) else 0.0) for col in BOOL_COLS]
-    return np.mean(vals) if len(vals) else 0.0
+# ---------- Helpers ----------
+def get_stores():
+    resp = sb.table("stores").select("code,name,city,status").order("code").execute()
+    return pd.DataFrame(resp.data)
 
-def color_from_score(score, has_data):
-    if not has_data: return "#E5E5E5"
-    if score >= 0.8: return "#A8D5BA"
-    if score >= 0.5: return "#FFF3B0"
-    return "#FFB5A7"
+def upload_photo(file, bucket, path):
+    buf = io.BytesIO(file.read())
+    sb.storage.from_(bucket).upload(path, buf.getvalue(),
+                                    {"content-type": file.type, "upsert": True})
+    return sb.storage.from_(bucket).create_signed_url(path, 60*60*24)["signedURL"]
 
-def safe_index(vals, target, default=0):
-    try:
-        return next(i for i, v in enumerate(vals) if v == target)
-    except StopIteration:
-        return default
-    except Exception:
-        return default
+def list_latest(bucket, prefix):
+    items = sb.storage.from_(bucket).list(path=prefix)
+    if not items:
+        return None, None
+    items = sorted(items, key=lambda x: (x.get("updated_at") or x.get("created_at") or x["name"]))
+    name = items[-1]["name"]
+    url = sb.storage.from_(bucket).create_signed_url(prefix + name, 60*60*24)["signedURL"]
+    return name, url
 
-def rerun_compat():
-    try:
-        st.rerun()
-    except Exception:
-        try:
-            st.experimental_rerun()
-        except Exception:
-            st.stop()
+def delete_latest(bucket, prefix):
+    name, _ = list_latest(bucket, prefix)
+    if name:
+        sb.storage.from_(bucket).remove([prefix + name])
+        return True
+    return False
 
-def set_params_and_rerun(**kwargs):
-    """Prefiere la API nueva (st.query_params); fallback a experimental."""
-    # limpia claves con None
-    params = {k: v for k, v in kwargs.items() if v is not None}
-    try:
-        # API nueva
-        st.query_params.clear()
-        st.query_params.update(params)
-    except Exception:
-        # Fallback API vieja
-        st.experimental_set_query_params(**{k: v for k, v in params.items()})
-    rerun_compat()
+def upsert_capture(date_val, store_code, notes, form_vals, created_by):
+    """Busca captura por (date, store_code). Si existe, actualiza; si no, inserta."""
+    sel = sb.table("captures").select("id").eq("date", str(date_val)).eq("store_code", store_code).execute()
+    payload = {
+        "date": str(date_val),
+        "store_code": store_code,
+        "notes": notes,
+        "created_by": created_by
+    }
+    payload.update(form_vals)
+    if sel.data:
+        cid = sel.data[0]["id"]
+        sb.table("captures").update(payload).eq("id", cid).execute()
+        return "update"
+    else:
+        sb.table("captures").insert(payload).execute()
+        return "insert"
 
-def get_params():
-    """Lee query params preferentemente con la API nueva."""
-    try:
-        return dict(st.query_params)
-    except Exception:
-        qp = st.experimental_get_query_params()
-        return {k:(v[0] if isinstance(v, list) and v else v) for k,v in qp.items()}
+# ---------- App ----------
+require_login()
+role, my_store = role_and_store()
+is_admin = role in ("jefe","andrea")
+st.caption(f"Conectado como **{role}** — tienda: **{my_store or 'todas'}**")
 
-# ---------------- Routing por query params ----------------
-params = get_params()
-view = params.get("view", "dashboard") or "dashboard"
-tienda_qp = params.get("tienda", None)
-
-st.title("🛍️ Retail 33 — Demo Visual")
-
-# Filtros
-st.sidebar.header("Filtros")
-ciudad_sel = st.sidebar.selectbox("Ciudad", ["Todas"] + sorted(df_t["ciudad"].unique()))
-estatus_sel = st.sidebar.selectbox("Estatus", ["Todos"] + sorted(df_t["estatus"].unique()))
-
-# Navegación (radio) que escribe params y rerun
-nav_labels = {"dashboard":"📊 Dashboard", "captura":"📝 Captura diaria", "tareas":"✅ Tareas", "config":"⚙️ Configuración"}
-keys_list = list(nav_labels.keys())
-try:
-    current_index = keys_list.index(view)
-except ValueError:
-    current_index = 0
-
-choice = st.sidebar.radio("Secciones", [nav_labels[k] for k in keys_list], index=current_index)
-for k, lbl in nav_labels.items():
-    if lbl == choice and k != view:
-        set_params_and_rerun(view=k, tienda=tienda_qp)
-
-# Aplica filtros a tiendas
-df_t_filt = df_t.copy()
-if ciudad_sel != "Todas":
-    df_t_filt = df_t_filt[df_t_filt["ciudad"] == ciudad_sel]
-if estatus_sel != "Todos":
-    df_t_filt = df_t_filt[df_t_filt["estatus"] == estatus_sel]
+tab_dash, tab_captura, tab_reportes = st.tabs(["📊 Dashboard", "📝 Captura", "📤 Reportes"])
 
 # ==================== DASHBOARD ====================
-if view == "dashboard":
-    st.subheader("Resumen visual (hoy)")
-    hoy = dt.date.today()
+with tab_dash:
+    st.subheader("Resumen visual (por fecha)")
+    df_stores = get_stores()
+    fecha_dash = st.date_input("Fecha", dt.date.today(), key="fecha_dash")
 
-    df_hoy = df_t[["tienda_id","nombre","ciudad","estatus"]].merge(
-        df_c[df_c["fecha"] == hoy], on="tienda_id", how="left"
-    )
-    df_hoy["score_visual"] = df_hoy.apply(score_row, axis=1)
-    has_data = df_hoy[BOOL_COLS].notna().any(axis=1)
-    df_hoy["color"] = [color_from_score(s, d) for s, d in zip(df_hoy["score_visual"], has_data)]
+    # Capturas de esa fecha
+    resp = sb.table("captures").select("*").eq("date", str(fecha_dash)).execute()
+    df_cap = pd.DataFrame(resp.data) if resp.data else pd.DataFrame()
 
+    # Merge tiendas + captura del día
+    df = df_stores.merge(df_cap, how="left", left_on="code", right_on="store_code")
+    def score_row(r):
+        vals = [(1.0 if bool(r.get(f"{k}_si")) else 0.0) for k,_ in CATEGORIAS]
+        return float(np.mean(vals)) if vals else 0.0
+    df["score_visual"] = df.apply(score_row, axis=1)
+
+    def color_from_score(has_data, score):
+        if not has_data: return "#E5E5E5"
+        if score >= 0.8: return "#A8D5BA"
+        if score >= 0.5: return "#FFF3B0"
+        return "#FFB5A7"
+    has_data = df[[f"{k}_si" for k,_ in CATEGORIAS]].notna().any(axis=1)
+    df["color"] = [color_from_score(h, s) for h, s in zip(has_data, df["score_visual"])]
+
+    # KPIs
     c1, c2, c3 = st.columns(3)
-    cobertura = (has_data.sum() / max(len(df_hoy), 1)) * 100
-    score_prom = float(df_hoy["score_visual"].mean()) * 100
-    c1.metric("Visita (hoy)", f"{cobertura:,.0f}%")
-    c2.metric("Score promedio", f"{score_prom:,.1f}%")
-    c3.metric("Tiendas (filtro)", f"{len(df_t_filt)}")
+    c1.metric("Tiendas", len(df_stores))
+    c2.metric("Capturas hoy", int(has_data.sum()))
+    c3.metric("Score promedio", f"{df['score_visual'].mean()*100:,.1f}%")
 
-    st.markdown("### 🛍️ Tiendas (clic para ir a Captura)")
-    grid_cols = 6  # Para que quepan 33 en menos filas
-    df_grid = df_t_filt.sort_values("tienda_id")
-    blocks = [df_grid.iloc[i:i+grid_cols] for i in range(0, len(df_grid), grid_cols)]
-
+    st.markdown("### 🛍️ Tiendas (color por score)")
+    grid_cols = 3
+    blocks = [df.iloc[i:i+grid_cols] for i in range(0, len(df), grid_cols)]
     for block in blocks:
         cols = st.columns(len(block))
         for j, (_, r) in enumerate(block.iterrows()):
-            # color/score seguro
-            try:
-                row_hoy = df_hoy[df_hoy["tienda_id"] == r["tienda_id"]]
-                if row_hoy.empty:
-                    raise ValueError("Sin datos")
-                color = str(row_hoy["color"].iloc[0])
-                sc = float(row_hoy["score_visual"].iloc[0]) * 100.0
-            except Exception:
-                color, sc = "#E5E5E5", 0.0
+            sc = r["score_visual"] * 100
+            cols[j].markdown(
+                f"""<div class="store" style="background:{r['color']}">
+                {r['code']}<small>{r['name']}</small>
+                <small>Score: {sc:,.0f}%</small>
+                </div>""",
+                unsafe_allow_html=True
+            )
 
-            with stylable_container(key=f"card_{r['tienda_id']}",
-                                    css_styles=f"{{ background:{color}; border-radius:12px; padding:10px; border:1px solid #e8e8e8; }}"):
-                cols[j].markdown(f"**{r['tienda_id']} — {r['nombre']}**  \n<small>Score: {sc:,.0f}%</small>", unsafe_allow_html=True)
-                if cols[j].button("Capturar aquí", key=f"btn_{r['tienda_id']}"):
-                    set_params_and_rerun(view="captura", tienda=r["tienda_id"])
-
-    st.markdown("### 🔍 Detalle de hoy")
-    st.dataframe(
-        df_hoy[["tienda_id","nombre","ciudad","estatus","score_visual","notas"]]
-        .rename(columns={"score_visual":"score_visual_0_1"}),
-        use_container_width=True
-    )
+    st.markdown("### 🔍 Detalle")
+    show_cols = ["code","name","city","status","score_visual","notes"]
+    if not df.empty:
+        st.dataframe(df[show_cols].rename(columns={"code":"tienda","name":"nombre","score_visual":"score_0_1"}),
+                     use_container_width=True)
+    else:
+        st.info("Sin capturas para esa fecha.")
 
 # ==================== CAPTURA ====================
-elif view == "captura":
-    st.subheader("📝 Captura diaria")
+with tab_captura:
+    st.subheader("Visita (captura + fotos)")
+    df_stores = get_stores()
+    if is_admin:
+        _store = st.selectbox("Tienda", df_stores["code"].tolist(), index=0)
+    else:
+        _store = my_store
+        st.info(f"Tu tienda: **{_store}**")
 
-    opciones = df_t_filt["tienda_id"].tolist() or df_t["tienda_id"].tolist()
-    default_tienda = tienda_qp or (opciones[0] if opciones else None)
-    idx = safe_index(opciones, default_tienda, default=0)
-    idx = max(0, min(idx, max(len(opciones)-1, 0)))
+    col1, col2 = st.columns(2)
+    fecha = col1.date_input("Fecha", dt.date.today(), key="fecha_cap")
+    notas = col2.text_input("Notas generales", "")
 
-    c1, c2 = st.columns(2)
-    _fecha = c1.date_input("Fecha", dt.date.today())
-    tienda_id = c2.selectbox("Tienda", opciones, index=idx)
-    st.caption(f"Tienda seleccionada: **{tienda_id}**")
-
-    st.text_area("Notas generales")
-
-    st.markdown("Visual (Sí/No, notas y foto opcional)")
+    # --- Checklist + Foto Guía vs Actual por categoría ---
+    form_vals = {}
+    st.markdown("### Guía vs Actual por categoría")
     for key, label in CATEGORIAS:
         bg = PASTEL[key]
         with stylable_container(
             key=f"wrap_{key}",
             css_styles=f"""
                 {{
-                    background: {bg};
+                    background:{bg};
                     border: 1px solid #e8e8e8;
-                    border-radius: 12px;
-                    margin-bottom: 12px;
-                    padding: 0;
-                    overflow: hidden;
+                    border-radius: 12px; margin-bottom: 12px;
+                    padding:0; overflow:hidden;
                 }}
                 [data-testid="stExpander"] summary {{
                     background: transparent !important;
-                    color: #4a4a4a !important;
-                    font-weight: 700;
-                    margin: 0 !important;
-                    padding: 12px 14px !important;
-                    border: none !important;
+                    color:#4a4a4a !important; font-weight:700;
+                    margin:0 !important; padding:12px 14px !important; border:none !important;
                 }}
                 [data-testid="stExpander"] > div[role="region"] {{
-                    background: #ffffff !important;
-                    border-top: 1px solid #f0f0f0;
-                    border-radius: 0 0 12px 12px;
-                    padding: 12px 14px 16px 14px;
+                    background:#ffffff !important; border-top:1px solid #f0f0f0;
+                    border-radius:0 0 12px 12px; padding:12px 14px 16px 14px;
                 }}
-                [data-testid="stExpander"] summary:focus {{ outline: none !important; }}
             """
         ):
             with st.expander(label, expanded=False):
-                st.radio("¿Cumple?", ["No","Sí"], horizontal=True, key=f"{key}_si_demo")
-                st.text_area("Notas", key=f"{key}_notas_demo")
-                st.file_uploader("Foto (opcional)", type=["jpg","jpeg","png"], key=f"{key}_foto_demo")
+                # Sí/No + Notas (se guardan en captures)
+                val = st.radio("¿Cumple?", ["No","Sí"], horizontal=True, key=f"{key}_si_ui")
+                form_vals[f"{key}_si"] = (val == "Sí")
+                form_vals[f"{key}_notas"] = st.text_area("Notas", key=f"{key}_notas_ui")
 
-    # Volver al dashboard (usa API nueva; fallback ya está en set_params_and_rerun)
-    if hasattr(st, "link_button"):
-        st.link_button("⬅️ Volver al Dashboard", url=f"?view=dashboard&tienda={tienda_id}")
-    else:
-        if st.button("⬅️ Volver al Dashboard"):
-            set_params_and_rerun(view="dashboard", tienda=tienda_id)
+                # Fotos
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown("**Foto guía**")
+                    prefix_g = f"org1/store_{_store}/{key}/guide/"
+                    name_g, url_g = list_latest("guides", prefix_g)
+                    if url_g: st.image(url_g, use_container_width=True)
+                    else: st.info("Sin guía aún")
+                    if is_admin:
+                        gfile = st.file_uploader("Subir/actualizar guía", type=["jpg","jpeg","png"], key=f"g_{_store}_{key}")
+                        if gfile:
+                            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            path = f"{prefix_g}{ts}.jpg"
+                            upload_photo(gfile, "guides", path)
+                            st.success("Guía actualizada"); st.rerun()
+                        if name_g and st.button("Eliminar guía (última)", key=f"delg_{key}"):
+                            if delete_latest("guides", prefix_g):
+                                st.success("Eliminada"); st.rerun()
 
-# ==================== TAREAS / CONFIG ====================
-elif view == "tareas":
-    st.subheader("✅ Gestión de tareas (demo)")
-    st.write("Aquí irán las tareas (no implementado en demo).")
+                with c2:
+                    st.markdown("**Foto actual**")
+                    prefix_c = f"org1/store_{_store}/{key}/current/"
+                    name_c, url_c = list_latest("current", prefix_c)
+                    if url_c: st.image(url_c, use_container_width=True)
+                    afile = st.file_uploader("Subir foto actual", type=["jpg","jpeg","png"], key=f"c_{_store}_{key}")
+                    if afile:
+                        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        path = f"{prefix_c}{ts}.jpg"
+                        upload_photo(afile, "current", path)
+                        st.success("Foto actual subida"); st.rerun()
 
-elif view == "config":
-    st.subheader("⚙️ Tiendas (demo)")
-    st.dataframe(df_t, use_container_width=True)
+    # Guardar CAPTURA (upsert por fecha+tienda)
+    if st.button("💾 Guardar captura"):
+        who = st.session_state.user.id
+        action = upsert_capture(fecha, _store, notas, form_vals, who)
+        st.success("Captura actualizada" if action=="update" else "Captura guardada")
+
+# ==================== REPORTES ====================
+with tab_reportes:
+    st.subheader("Exportar capturas")
+    colA, colB = st.columns(2)
+    d1 = colA.date_input("Desde", dt.date.today().replace(day=1))
+    d2 = colB.date_input("Hasta", dt.date.today())
+    btn = st.button("🔎 Consultar")
+    if btn:
+        q = sb.table("captures").select("*").gte("date", str(d1)).lte("date", str(d2))
+        if not is_admin and my_store:
+            q = q.eq("store_code", my_store)
+        resp = q.order("date").execute()
+        df = pd.DataFrame(resp.data) if resp.data else pd.DataFrame()
+        if df.empty:
+            st.info("Sin capturas en el rango.")
+        else:
+            st.dataframe(df, use_container_width=True)
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button("⬇️ Descargar CSV", data=csv, file_name="capturas.csv", mime="text/csv")
+            # Excel opcional
+            try:
+                import xlsxwriter
+                buff = io.BytesIO()
+                with pd.ExcelWriter(buff, engine="xlsxwriter") as w:
+                    df.to_excel(w, index=False, sheet_name="capturas")
+                st.download_button("⬇️ Descargar Excel", data=buff.getvalue(),
+                                   file_name="capturas.xlsx",
+                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            except Exception:
+                pass
